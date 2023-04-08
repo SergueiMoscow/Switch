@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../../cpp/Arduino/Switch"
+		},
+		{
+			"name": "Switch",
+			"path": "../.."
+		}
+	],
+	"settings": {}
+}
