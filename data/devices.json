@@ -1,0 +1,29 @@
+{
+    "device1": {
+        "type": "Relay",
+        "pin": "D3",
+        "name": "Relay_Kitchen",
+        "description": "Тёплый пол на кухне",
+        "on": "LOW",
+        "automation1": {
+            "type": "time",
+            "timeon": "22:00",
+            "timeoff": "23:00",
+            "action": "off"
+        },
+        "automation2": {
+            "type": "temperature",
+            "device": "DS_Kitchen",
+            "max": 23,
+            "min": 18,
+            "action": "on"
+        }
+    },
+
+    "device2": {
+        "type": "DS18B20",
+        "pin": "D4",
+        "name": "DS_Kitchen",
+        "description": "Т пола на кухне"
+    }
+}
