@@ -17,4 +17,5 @@ void webWifi();
 void webStyle();
 String webMenu(String current);
 void test();
+void webReset();
 // };

@@ -1,44 +1,87 @@
 #include "S_MQTT.h"
 
-S_MQTT::S_MQTT()
-{
-    init();
-}
+// S_MQTT::S_MQTT()
+// {
+//     init();
+// }
 
-void S_MQTT::init()
+void S_MQTT::init(PubSubClient* client)
 {
+    mqttClient = client;
     S_FS fs = S_FS();
-    JSONVar mqttJson = JSON.parse(fs.readFile(MQTT_SETTINGS_FILE));
-    JSONVar keys = mqttJson.keys();
     bool found = false;
+    JSONVar mqttJson = JSON.parse(fs.readFile(MQTT_SETTINGS_FILE));
+    if (JSON.stringify(mqttJson).length() < 10) return;
+    JSONVar keys = mqttJson.keys();
     for (int i = 0; i < keys.length(); i++)
     {
-        if (clearValue(mqttJson[keys[i]["active"]]) == "1")
+        Serial.println("Checking MQTT " + JSON.stringify(keys[i]));
+        if (clearValue(mqttJson[keys[i]]["Active"]) == "1")
         {
             mqttSettings = mqttJson[keys[i]];
             periodSec = atoi(clearValue(mqttJson[keys[i]]["period"]).c_str());
             found = true;
+            break;
         }
     }
     if (found) {
         setServer();
+        connect();
     }
+    else {
+        Serial.println("Active MQTT is not configured");
+    }
+}
+
+void callback(char* topic, byte* message, unsigned int len)
+{
+    return;
 }
 
 void S_MQTT::setServer()
 {
-    const char* server = clearValue(mqttSettings["server"]).c_str();
-    int port = atoi(clearValue(mqttSettings["port"]).c_str());
-    mqttClient.setServer(server, port);
+    mqttServer = clearValue(mqttSettings["Server"]);
+    const char* server = mqttServer.c_str();
+    const char* check = "192.168.12.1";
+    if (server == "") {
+        Serial.println("MQTT Server is not configured");
+        return;
+    }
+    int port = atoi(clearValue(mqttSettings["Port"]).c_str());
+    Serial.print("Trying to set MQTT server: \"");
+    Serial.print(server);
+    Serial.println("\" port: " + (String)port);
+    mqttClient->setServer(server, port);
+    mqttClient->setCallback(callback);
 }
 
 void S_MQTT::connect()
 {
-    const char* clientId = WiFi.macAddress().c_str();
-    const char* user = clearValue(mqttSettings["user"]).c_str();
-    const char* password = clearValue(mqttSettings["password"]).c_str();
+    JSONVar jUser, jPass;
+    jUser = mqttSettings["User"];
+    jPass = mqttSettings["Password"];
+    if (jUser == null || jPass == null) {
+        Serial.println("User or password is not configured");
+        return;
+    }
+    String clientId = WiFi.macAddress().c_str();
+    String user = clearValue(mqttSettings["User"], "user").c_str();
+    String password = clearValue(mqttSettings["Password"], "pass").c_str();
+    if (user == "") user = "user";
+    if (password == "") password = "pass";
+    Serial.print("LastTryConnect: ");
+    Serial.println(lastTryConnect);
+    Serial.print("Passed: ");
+    Serial.print(millis() - lastTryConnect);
+    Serial.println("id: " + clientId + ", user: " + user + ", pass: " + password);
     if (lastTryConnect == 0 || millis() - lastTryConnect > 10000) {
-        mqttClient.connect(clientId, user, password);
+        if (mqttClient->connect(clientId.c_str(), user.c_str(), password.c_str())) {
+            Serial.println("Connected to MQTT ");
+            isConfigured = true;
+        }
+        else {
+            Serial.println("Couldn't connect to MQTT");
+        }
         lastTryConnect = millis();
     }
 }
@@ -47,10 +90,21 @@ String S_MQTT::clearValue(JSONVar value)
 {
     String result = JSON.stringify(value);
     result.replace("\"", "");
-    result.toLowerCase();
-    result.trim();
+    //result.toLowerCase();
+    //result.trim();
     return result;
 }
+
+String S_MQTT::clearValue(JSONVar value, String default_value)
+{
+    String result = JSON.stringify(value);
+    if (result == null) return default_value;
+    result.replace("\"", "");
+    //result.toLowerCase();
+    //result.trim();
+    return result;
+}
+
 
 String S_MQTT::getSubscribeString()
 {
@@ -68,21 +122,25 @@ String S_MQTT::getRootTopic()
     return object + "/" + room + "/" + device + "/";
 }
 
-void S_MQTT::publish(bool force = false)
+void S_MQTT::publish(bool force)
 {
+    int a = 0;
 }
 
 void S_MQTT::loop()
 {
-    if (!mqttClient.connected())
+    if (isConfigured && !mqttClient->connected())
     {
+        Serial.println("MQTT not connected");
         connect();
     }
     unsigned long curMillis = millis();
     if (max(curMillis, lastPublished) - min(curMillis, lastPublished) > periodSec * 1000)
     {
-        publish(false);
-        lastPublished = millis();
+        if (mqttClient->connected()) {
+            publish(false);
+            lastPublished = millis();
+        }
     }
-    mqttClient.loop();
+    mqttClient->loop();
 }

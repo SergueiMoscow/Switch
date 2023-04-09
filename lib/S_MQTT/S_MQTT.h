@@ -12,18 +12,20 @@ class S_MQTT
 {
     private:
         JSONVar mqttSettings;
-        WiFiClient wifiClient;
-        PubSubClient mqttClient;
+        PubSubClient* mqttClient;
         unsigned long lastPublished;
         unsigned int periodSec;
         unsigned long lastTryConnect;
-        void loop();
-        void publish(bool force = false);
+        bool isConfigured = false;
+        void publish(bool force);
         String getRootTopic();
         String clearValue(JSONVar value);
+        String clearValue(JSONVar value, String default_value);
         void setServer();
+        String mqttServer;
     public:
-        void init();
+        void loop();
+        void init(PubSubClient* client);
         String getSubscribeString();
         void connect();
 

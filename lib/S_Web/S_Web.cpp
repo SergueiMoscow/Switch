@@ -21,6 +21,7 @@ void webServerSetup()
   // void S_Web::setup()
   server.on("/", test);
   server.on("/settings", webSettings);
+  server.on("/reset", webReset);
   server.on("/wifi", webWifi);
   server.on("/spiffs", webFSBrowser);
   server.on("/style.css", webStyle);
@@ -312,3 +313,8 @@ void webWifi()
   //   String output = fileContent("/index.htm");
   //   server.send(200, "text/html", output);
   // }
+
+  void webReset()
+  {
+    ESP.restart();
+  }

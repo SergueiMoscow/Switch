@@ -150,7 +150,6 @@ void S_WiFi::connect()
       pass.replace("\"", "");
       WiFi.mode(WIFI_STA);
       mode = STA;
-      Serial.println("Trying with pass " + pass);
       WiFi.begin(ssid.c_str(), pass.c_str());
       int i = 0;
       while (WiFi.status() != WL_CONNECTED && i < 50)
@@ -189,10 +188,8 @@ bool S_WiFi::isSSID(String ssid)
     for (int i = 0; i < wifiCount; ++i)
     {
       tmpSSID = WiFi.SSID(i);
-      Serial.println("Comparing " + ssid + " with " + tmpSSID);
       if (tmpSSID == ssid)
       {
-        Serial.println("Found " + ssid);
         return true;
       }
     }
