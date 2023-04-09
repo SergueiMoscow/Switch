@@ -1,0 +1,18 @@
+{
+    "Ryazanovo":
+    {
+        "MQTT_Server": "192.168.15.1",
+        "MQTT_Port":"1883",
+        "MQTT_User":"",
+        "MQTT_Pass":"",
+        "MQTT_Period":10,
+        "Active":1
+    },
+    "WQTT":
+    {
+        "MQTT_Server": "m6.wqtt.ru",
+        "MQTT_POSr": 12128,
+        "MQTT_User": "",
+        "MQTT_PASS": ""
+    }
+}
