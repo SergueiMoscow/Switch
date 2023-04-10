@@ -5,11 +5,13 @@
 //     init();
 // }
 
-void S_MQTT::init(PubSubClient* client)
+void S_MQTT::init(PubSubClient* client, S_Devices* devicesPtr)
 {
     mqttClient = client;
+    devices = devicesPtr;
     S_FS fs = S_FS();
     bool found = false;
+    Serial.println("S_MQTT.cpp reading mqtt settings");
     JSONVar mqttJson = JSON.parse(fs.readFile(MQTT_SETTINGS_FILE));
     if (JSON.stringify(mqttJson).length() < 10) return;
     JSONVar keys = mqttJson.keys();
@@ -26,6 +28,7 @@ void S_MQTT::init(PubSubClient* client)
     }
     if (found) {
         setServer();
+        setRootTopic();
         connect();
     }
     else {
@@ -42,7 +45,6 @@ void S_MQTT::setServer()
 {
     mqttServer = clearValue(mqttSettings["Server"]);
     const char* server = mqttServer.c_str();
-    const char* check = "192.168.12.1";
     if (server == "") {
         Serial.println("MQTT Server is not configured");
         return;
@@ -77,6 +79,8 @@ void S_MQTT::connect()
     if (lastTryConnect == 0 || millis() - lastTryConnect > 10000) {
         if (mqttClient->connect(clientId.c_str(), user.c_str(), password.c_str())) {
             Serial.println("Connected to MQTT ");
+            publish(false);
+            mqttClient->subscribe(getSubscribeString().c_str());
             isConfigured = true;
         }
         else {
@@ -108,23 +112,24 @@ String S_MQTT::clearValue(JSONVar value, String default_value)
 
 String S_MQTT::getSubscribeString()
 {
-    return getRootTopic() + SUBSCRIBE_POSTFIX + "/#";
+    return rootTopic + SUBSCRIBE_POSTFIX + "/#";
 }
 
-String S_MQTT::getRootTopic()
+void S_MQTT::setRootTopic()
 {
     S_Settings globalSettings;
+    Serial.print("S_MQTT setSettingsFile (Global)");
     globalSettings.setSettingsFile(GLOBAL_SETTINGS_FILE);
     String object, room, device;
-    object = globalSettings.getSetting("object");
-    room = globalSettings.getSetting("room");
-    device = globalSettings.getSetting("device");
-    return object + "/" + room + "/" + device + "/";
+    object = globalSettings.getSetting("object", "default");
+    room = globalSettings.getSetting("room", "default");
+    device = globalSettings.getSetting("device", "default");
+    rootTopic = object + "/" + room + "/" + device + "/";
 }
 
 void S_MQTT::publish(bool force)
 {
-    int a = 0;
+    String rootTopic = rootTopic;
 }
 
 void S_MQTT::loop()

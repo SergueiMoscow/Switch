@@ -227,6 +227,10 @@ void webFSBrowser()
     if (server.hasArg("view"))
     {
       File file = LittleFS.open(server.arg("view"), "r");
+  if (!file) {
+    Serial.println("Failed to open file for reading");
+    page_content += "<b>Failed to open file for reading</b>";
+  }
       page_content += "<hr>";
       while (file.available())
       {

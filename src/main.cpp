@@ -19,7 +19,9 @@ S_MQTT sMQTT;
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
-PubSubClient* pMqttClient = &mqttClient;
+PubSubClient* mqttClientPtr = &mqttClient;
+S_Devices devices = S_Devices();
+S_Devices* devicesPtr = &devices;
 
 void setup()
 {
@@ -28,7 +30,7 @@ void setup()
   // commonSettings.setSettingsFile(SETTINGS_FILE);
   sWiFi.connect();
   webServerSetup();
-  sMQTT.init(pMqttClient);
+  sMQTT.init(mqttClientPtr, devicesPtr);
 }
 
 void loop()

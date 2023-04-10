@@ -24,4 +24,5 @@ class S_Devices
     public:
         void init();
         void changeRelay(int relay, String value, String caller);
+        S_Devices();
 };

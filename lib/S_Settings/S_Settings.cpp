@@ -11,9 +11,9 @@
 #endif
 // #define SETTINGS_FILE "/settings.json"
 
-bool S_Settings::setSettingsFile(String settingsFile)
+bool S_Settings::setSettingsFile(String p_settingsFile)
 {
-  strcpy(this->settingsFile, settingsFile.c_str());
+  strcpy(settingsFile, p_settingsFile.c_str());
   this->readSettings();
   return true;
 }
@@ -21,19 +21,22 @@ bool S_Settings::setSettingsFile(String settingsFile)
 //--------------- readSettings-------------
 void S_Settings::readSettings()
 {
-  bool debug = false;
-  S_FS fs = S_FS();
-  this->settings = JSON.parse(fs.readFile(this->settingsFile));
+  bool debug = true;
+  S_FS* fs = new S_FS();
+  if (debug) Serial.print("Settings.cpp readSettings ");
+  if (debug) Serial.println(settingsFile);
+  settings = JSON.parse(fs->readFile(settingsFile));
+  delete fs;
 }
 
 //--------------- writeSettings-------------
 void S_Settings::writeSettings()
 {
   Serial.print("SSettings writeSettings point 1, File: ");
-  Serial.println(this->settingsFile);
-  File file = LittleFS.open(this->settingsFile, "w");
-  file.print(JSON.stringify(this->settings));
-  Serial.println(JSON.stringify(this->settings));
+  Serial.println(settingsFile);
+  File file = LittleFS.open(settingsFile, "w");
+  file.print(JSON.stringify(settings));
+  Serial.println(JSON.stringify(settings));
   file.close();
 }
 
