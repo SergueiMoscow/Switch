@@ -21,8 +21,11 @@ class S_Devices
         String clearValue(JSONVar key);
         void initRelay(JSONVar device);
         int getPin(JSONVar pin);
+        int getRelayByPin(int pin);
     public:
         void init();
         void changeRelay(int relay, String value, String caller);
         S_Devices();
+        JSONVar getForPublish();
+
 };

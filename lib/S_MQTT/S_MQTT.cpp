@@ -5,7 +5,7 @@
 //     init();
 // }
 
-void S_MQTT::init(PubSubClient* client, S_Devices* devicesPtr)
+void S_MQTT::init(PubSubClient *client, S_Devices *devicesPtr)
 {
     mqttClient = client;
     devices = devicesPtr;
@@ -13,7 +13,8 @@ void S_MQTT::init(PubSubClient* client, S_Devices* devicesPtr)
     bool found = false;
     Serial.println("S_MQTT.cpp reading mqtt settings");
     JSONVar mqttJson = JSON.parse(fs.readFile(MQTT_SETTINGS_FILE));
-    if (JSON.stringify(mqttJson).length() < 10) return;
+    if (JSON.stringify(mqttJson).length() < 10)
+        return;
     JSONVar keys = mqttJson.keys();
     for (int i = 0; i < keys.length(); i++)
     {
@@ -21,31 +22,42 @@ void S_MQTT::init(PubSubClient* client, S_Devices* devicesPtr)
         if (clearValue(mqttJson[keys[i]]["Active"]) == "1")
         {
             mqttSettings = mqttJson[keys[i]];
-            periodSec = atoi(clearValue(mqttJson[keys[i]]["period"]).c_str());
+            periodSec = atoi(clearValue(mqttJson[keys[i]]["Period"]).c_str());
+            Serial.println("PeriodSec: " + (String)periodSec);
             found = true;
             break;
         }
     }
-    if (found) {
+    if (found)
+    {
         setServer();
         setRootTopic();
         connect();
     }
-    else {
+    else
+    {
         Serial.println("Active MQTT is not configured");
     }
 }
 
-void callback(char* topic, byte* message, unsigned int len)
+void callback(char *topic, byte *msg, unsigned int len)
 {
+    String message;
+    for (int i = 0; i < len; i++)
+    {
+        Serial.print((char)msg[i]);
+        message += (char)msg[i];
+    }
+    Serial.print("Callback: " + (String)topic + ": " + message);
     return;
 }
 
 void S_MQTT::setServer()
 {
     mqttServer = clearValue(mqttSettings["Server"]);
-    const char* server = mqttServer.c_str();
-    if (server == "") {
+    const char *server = mqttServer.c_str();
+    if (server == "")
+    {
         Serial.println("MQTT Server is not configured");
         return;
     }
@@ -62,28 +74,36 @@ void S_MQTT::connect()
     JSONVar jUser, jPass;
     jUser = mqttSettings["User"];
     jPass = mqttSettings["Password"];
-    if (jUser == null || jPass == null) {
+    if (jUser == null || jPass == null)
+    {
         Serial.println("User or password is not configured");
         return;
     }
     String clientId = WiFi.macAddress().c_str();
     String user = clearValue(mqttSettings["User"], "user").c_str();
     String password = clearValue(mqttSettings["Password"], "pass").c_str();
-    if (user == "") user = "user";
-    if (password == "") password = "pass";
+    if (user == "")
+        user = "user";
+    if (password == "")
+        password = "pass";
     Serial.print("LastTryConnect: ");
     Serial.println(lastTryConnect);
     Serial.print("Passed: ");
     Serial.print(millis() - lastTryConnect);
     Serial.println("id: " + clientId + ", user: " + user + ", pass: " + password);
-    if (lastTryConnect == 0 || millis() - lastTryConnect > 10000) {
-        if (mqttClient->connect(clientId.c_str(), user.c_str(), password.c_str())) {
+    if (lastTryConnect == 0 || millis() - lastTryConnect > 10000)
+    {
+        if (mqttClient->connect(clientId.c_str(), user.c_str(), password.c_str()))
+        {
             Serial.println("Connected to MQTT ");
             publish(false);
-            mqttClient->subscribe(getSubscribeString().c_str());
+            String subscribeString = getSubscribeString();
+            Serial.print("Subscribe to: " + subscribeString);
+            mqttClient->subscribe(subscribeString.c_str());
             isConfigured = true;
         }
-        else {
+        else
+        {
             Serial.println("Couldn't connect to MQTT");
         }
         lastTryConnect = millis();
@@ -94,21 +114,21 @@ String S_MQTT::clearValue(JSONVar value)
 {
     String result = JSON.stringify(value);
     result.replace("\"", "");
-    //result.toLowerCase();
-    //result.trim();
+    // result.toLowerCase();
+    // result.trim();
     return result;
 }
 
 String S_MQTT::clearValue(JSONVar value, String default_value)
 {
     String result = JSON.stringify(value);
-    if (result == null) return default_value;
+    if (result == null)
+        return default_value;
     result.replace("\"", "");
-    //result.toLowerCase();
-    //result.trim();
+    // result.toLowerCase();
+    // result.trim();
     return result;
 }
-
 
 String S_MQTT::getSubscribeString()
 {
@@ -130,6 +150,8 @@ void S_MQTT::setRootTopic()
 void S_MQTT::publish(bool force)
 {
     String rootTopic = rootTopic;
+    JSONVar devicesValues = devices->getForPublish();
+    Serial.println(JSON.stringify(devicesValues));
 }
 
 void S_MQTT::loop()
@@ -142,7 +164,8 @@ void S_MQTT::loop()
     unsigned long curMillis = millis();
     if (max(curMillis, lastPublished) - min(curMillis, lastPublished) > periodSec * 1000)
     {
-        if (mqttClient->connected()) {
+        if (mqttClient->connected())
+        {
             publish(false);
             lastPublished = millis();
         }

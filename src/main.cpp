@@ -30,6 +30,7 @@ void setup()
   // commonSettings.setSettingsFile(SETTINGS_FILE);
   sWiFi.connect();
   webServerSetup();
+  devices.init();
   sMQTT.init(mqttClientPtr, devicesPtr);
 }
 
