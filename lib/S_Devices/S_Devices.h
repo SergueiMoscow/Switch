@@ -3,7 +3,7 @@
 #include "S_FS.h"
 #include "S_DS.h"
 #include "S_Settings.h"
-#include <TimeLib.h>
+#include "S_Common.h"
 
 #define RELAY_PIN 0
 #define RELAY_ON 1
@@ -28,7 +28,7 @@ class S_Devices
         int getPinByName(String name);
         void setMillisToTurnOff(int relay, int sec = 0);
         JSONVar getDeviceByName(String relayName);
-        void setMillisToTurnOff(int relay, int sec, JSONVar device);
+        void setTimeToTurnOff(int relay, unsigned long sec, JSONVar device);
     public:
         void init();
         void changeRelay(int relay, String value, String caller);

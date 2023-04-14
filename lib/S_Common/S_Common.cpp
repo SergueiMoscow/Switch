@@ -6,16 +6,17 @@ namespace S_Common
     {
         S_Settings timeSettings = S_Settings();
         timeSettings.setSettingsFile("time.json");
-        String local = timeSettings.getSetting("remote", "");
-        if (local != "")
+        String local = timeSettings.getSetting("local", "");
+        String remote = timeSettings.getSetting("remote", "");
+        if (remote != "")
         {
-            Serial.println("Common: Local time server: " + local);
-            checkTime(local);
-            // String time = getURL(local);
-            // char **pointer, *stringVar;
-            // time.toCharArray(stringVar, sizeof(time));
-            // Serial.println("Common: local time: " + time);
-            // setTime(strtoul(stringVar, NULL, 10));
+            Serial.println("Common: Remote time server: " + remote);
+            if (!checkTime(remote)) {
+                Serial.println("Common: Can't set time from " + remote);
+                if (!checkTime(local)) {
+                    Serial.println("Common: Can't set time from " + local);
+                }
+            }
         }
     }
 
@@ -129,7 +130,7 @@ namespace S_Common
     //     }
     // }
 
-    void S_Common::checkTime(String url)
+    bool S_Common::checkTime(String url)
     {
         static unsigned long msCheck = 0;
         static unsigned long lastGetByUrl = 0;
@@ -165,10 +166,11 @@ namespace S_Common
                 Serial.print(":");
                 Serial.println(minute());
             }
-            msCheck = millis();
         }
-
+        msCheck = millis();
+        return now() > (time_t)(1681479472UL);
     }
+
         String S_Common::deleteQuotes(String str)
         {
             str.replace("\"", "");

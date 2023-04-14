@@ -43,7 +43,8 @@ void S_Devices::initRelay(JSONVar device)
     if (debug) Serial.println("LOW "  + (String)LOW);
     if (debug) Serial.println("HIGH "  + (String)HIGH);
     pinMode(relays[num_relays][RELAY_PIN], OUTPUT);
-    digitalWrite(relays[num_relays][RELAY_PIN], relays[num_relays][RELAY_OFF]);
+    // digitalWrite(relays[num_relays][RELAY_PIN], relays[num_relays][RELAY_OFF]);
+    changeRelay(num_relays, "off", "init");
     num_relays++;
 }
 
@@ -72,7 +73,10 @@ int S_Devices::getPin(JSONVar pin)
 
 void S_Devices::changeRelay(int relay, String value, String caller)
 {
-  digitalWrite(relay, (value == "on" ? relays[relay][RELAY_ON] : relays[relay][RELAY_OFF]));
+    bool debug = true;
+  digitalWrite(relays[relay][RELAY_PIN], (value.equals("on") ? relays[relay][RELAY_ON] : relays[relay][RELAY_OFF]));
+  if (debug) Serial.println("Set " + (String)relays[relay][RELAY_PIN] + " to " + (String)digitalRead(relays[relay][RELAY_PIN]));
+  
 }
 
 JSONVar S_Devices::getForPublish()
@@ -125,30 +129,36 @@ void S_Devices::callback(String topic, String value)
     if (debug) Serial.println("Device callback value received: " + value);
     if (value.equals("ON")) {
         Serial.println("ON: Pin: " + (String)relays[relay][RELAY_PIN] + " value " + relays[relay][RELAY_ON]);
-        digitalWrite(relays[relay][RELAY_PIN], relays[relay][RELAY_ON]);
+        // digitalWrite(relays[relay][RELAY_PIN], relays[relay][RELAY_ON]);
+        changeRelay(relay, "on", "callback");
         relay_turned_on[relay] = millis();
     }
     if (value.equals("OFF")) {
         Serial.println("OFF: Pin: " + (String)relays[relay][RELAY_PIN] + " value " + relays[relay][RELAY_OFF]);
-        digitalWrite(relays[relay][RELAY_PIN], relays[relay][RELAY_OFF]);
+        // digitalWrite(relays[relay][RELAY_PIN], relays[relay][RELAY_OFF]);
+        changeRelay(relay, "off", "callback");
         relay_turned_on[relay] = 0UL;
     }
     if (value.toInt() > 0) {
         Serial.println("NUM: Pin: " + (String)relays[relay][RELAY_PIN] + " value " + relays[relay][RELAY_ON]);
-        digitalWrite(relays[relay][RELAY_PIN], relays[relay][RELAY_ON]);
+        // digitalWrite(relays[relay][RELAY_PIN], relays[relay][RELAY_ON]);
+        changeRelay(relay, "on", "callback");
         relay_turned_on[relay] = millis();
-        setMillisToTurnOff(relay, value.toInt(), &device);
+        setTimeToTurnOff(relay, value.toInt(), &device);
     }
 }
 
-void S_Devices::setMillisToTurnOff(int relay, int sec, JSONVar device)
+void S_Devices::setTimeToTurnOff(int relay, unsigned long sec, JSONVar device)
 {
+    bool debug = true;
+    unsigned long currentTime = S_Common::S_Common::getUTime();
     if (sec == 0) {
         unsigned long defaultMaxSec = strtoul(clearValue(device["max_on"]).c_str(), 0, 10);
-        relay_turn_off[relay] = millis() + (defaultMaxSec * 1000UL);
+        relay_turn_off[relay] = currentTime + defaultMaxSec;
     } else {
-
+        relay_turn_off[relay] = currentTime + sec;
     }
+    if (debug) Serial.println("SetTimeToTurnOff: Turn off at " + (String)relay_turn_off[relay] + " now " + (String)(now()));
 
 }
 
@@ -182,6 +192,17 @@ JSONVar S_Devices::getDeviceByName(String relayName)
 
 void S_Devices::loop()
 {
+    /// TODO: check relay_turn_off array
+    bool debug = true;
+    unsigned long currentTime = S_Common::S_Common::getUTime();
+    for (int relay = 0; relay < num_relays; relay++) {
+        if (relay_turn_off[relay] != 0 && relay_turn_off[relay] <= currentTime) {
+            changeRelay(relay, "off", "loop timer");
+            if (debug) Serial.println("Turning off by timer relay " + (String)relay);
+            relay_turn_off[relay] = 0;
+        }
+    }
+    
     // Serial.println("Devices loop Unsigned long max");
     // Serial.println(0UL - 1UL);
 }

@@ -16,6 +16,11 @@ void S_MQTT::init(PubSubClient* client, S_Devices* devicesPtr)
 {
     mqttClient = client;
     devices = devicesPtr;
+    loadConfig();
+}
+
+void S_MQTT::loadConfig()
+{
     S_FS fs = S_FS();
     bool found = false;
     Serial.println("S_MQTT.cpp reading mqtt settings");
@@ -53,6 +58,7 @@ void S_MQTT::init(PubSubClient* client, S_Devices* devicesPtr)
 void callback(char *topic, byte *msg, unsigned int len)
 {
     extern S_Devices devices;
+    extern S_MQTT sMQTT;
     String message;
     for (int i = 0; i < len; i++)
     {
@@ -60,6 +66,7 @@ void callback(char *topic, byte *msg, unsigned int len)
     }
     Serial.print("Callback: " + (String)topic + ": " + message);
     devices.callback((String)topic, message);
+    sMQTT.publish(false);
     return;
 }
 
@@ -70,6 +77,7 @@ void S_MQTT::setServer()
     if (server == "")
     {
         Serial.println("MQTT Server is not configured");
+        loadConfig();
         return;
     }
     int port = atoi(clearValue(mqttSettings["Port"]).c_str());
@@ -88,6 +96,8 @@ void S_MQTT::connect()
     if (jUser == null || jPass == null)
     {
         Serial.println("User or password is not configured");
+        Serial.println(JSON.stringify(mqttSettings));
+        loadConfig();
         return;
     }
     String clientId = WiFi.macAddress().c_str();
@@ -104,7 +114,7 @@ void S_MQTT::connect()
     Serial.println("id: " + clientId + ", user: " + user + ", pass: " + password);
     if (lastTryConnect == 0 || millis() - lastTryConnect > 10000UL)
     {
-        if (mqttClient->connect(clientId.c_str(), user.c_str(), password.c_str()))
+        if (mqttClient->connect(clientId.c_str(), user.c_str(), password.c_str()), true)
         {
             Serial.println("Connected to MQTT ");
             publish(false);
@@ -162,23 +172,29 @@ void S_MQTT::publish(bool force)
 {
     String rootTopic = rootTopic;
     JSONVar devicesValues = devices->getForPublish();
+    devicesValues["time"] = S_Common::S_Common::getTime();
     Serial.println("Mqtt.publish: " + JSON.stringify(devicesValues));
+
+    mqttClient->publish((rootTopic + "state").c_str(), JSON.stringify(devicesValues).c_str(), true);
+    JSONVar keys = devicesValues.keys();
+    for (int i = 0; i < keys.length(); i++) {
+        String topic = rootTopic + clearValue(keys[i]);
+        String value = clearValue(devicesValues[keys[i]]);
+        mqttClient->publish(topic.c_str(), value.c_str(), true);
+    }
+
 }
 
 void S_MQTT::loop()
 {
-    if (isConfigured && !mqttClient->connected())
-    {
-        Serial.println("MQTT not connected");
-        connect();
-    }
     unsigned long curMillis = millis();
     if (max(curMillis, lastPublished) - min(curMillis, lastPublished) > periodSec * 1000)
     {
-        // Serial.print(max(curMillis, lastPublished) - min(curMillis, lastPublished));
-        // Serial.print(" > ");
-        // Serial.println(periodSec * 1000);
-        //Serial.println("MQTT time: " + now());
+        if (isConfigured && !mqttClient->connected())
+        {
+            Serial.println("MQTT not connected");
+            connect();
+        }
         S_Common::S_Common::getUTime();
         Serial.println(S_Common::S_Common::getTime());
         if (mqttClient->connected())

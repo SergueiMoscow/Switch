@@ -21,7 +21,7 @@ class S_MQTT
         unsigned int periodSec;
         unsigned long lastTryConnect;
         bool isConfigured = false;
-        void publish(bool force);
+        void loadConfig();
         void setRootTopic();
         String rootTopic;
         String clearValue(JSONVar value);
@@ -30,6 +30,7 @@ class S_MQTT
         String mqttServer;
     public:
         // S_MQTT(PubSubClient* client, S_Devices* devices);
+        void publish(bool force);
         void loop();
         void init(PubSubClient* client, S_Devices* devices);
         // void init();

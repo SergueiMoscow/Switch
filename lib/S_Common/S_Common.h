@@ -28,7 +28,7 @@ namespace S_Common
         static String getURL(String url);
         static void setUTime();
         static unsigned long getUTime();
-        static void checkTime(String url);
+        static bool checkTime(String url);
         static String getTime(String type);
         static String getTime();
     };
