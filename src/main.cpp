@@ -10,6 +10,8 @@
 #include "S_WiFi.h"
 #include "S_MQTT.h"
 // using std::string;
+#include "S_Common.h"
+using S_Common::S_Common;
 
 // SSettings commonSettings;
 #define SETTINGS_FILE "/settings.json"
@@ -32,6 +34,7 @@ void setup()
   webServerSetup();
   devices.init();
   sMQTT.init(mqttClientPtr, devicesPtr);
+  S_Common::S_Common::setUTime();
 }
 
 void loop()

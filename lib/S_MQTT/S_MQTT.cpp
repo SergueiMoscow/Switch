@@ -5,7 +5,14 @@
 //     init();
 // }
 
-void S_MQTT::init(PubSubClient *client, S_Devices *devicesPtr)
+// S_MQTT::S_MQTT(PubSubClient* client, S_Devices* devicesPtr)
+// {
+//     mqttClient = client;
+//     devices = devicesPtr;
+// }
+
+// void S_MQTT::init(PubSubClient *client, S_Devices *devicesPtr)
+void S_MQTT::init(PubSubClient* client, S_Devices* devicesPtr)
 {
     mqttClient = client;
     devices = devicesPtr;
@@ -23,6 +30,9 @@ void S_MQTT::init(PubSubClient *client, S_Devices *devicesPtr)
         {
             mqttSettings = mqttJson[keys[i]];
             periodSec = atoi(clearValue(mqttJson[keys[i]]["Period"]).c_str());
+            if (periodSec < 10) {
+                periodSec = 10;
+            }
             Serial.println("PeriodSec: " + (String)periodSec);
             found = true;
             break;
@@ -42,13 +52,14 @@ void S_MQTT::init(PubSubClient *client, S_Devices *devicesPtr)
 
 void callback(char *topic, byte *msg, unsigned int len)
 {
+    extern S_Devices devices;
     String message;
     for (int i = 0; i < len; i++)
     {
-        Serial.print((char)msg[i]);
         message += (char)msg[i];
     }
     Serial.print("Callback: " + (String)topic + ": " + message);
+    devices.callback((String)topic, message);
     return;
 }
 
@@ -91,7 +102,7 @@ void S_MQTT::connect()
     Serial.print("Passed: ");
     Serial.print(millis() - lastTryConnect);
     Serial.println("id: " + clientId + ", user: " + user + ", pass: " + password);
-    if (lastTryConnect == 0 || millis() - lastTryConnect > 10000)
+    if (lastTryConnect == 0 || millis() - lastTryConnect > 10000UL)
     {
         if (mqttClient->connect(clientId.c_str(), user.c_str(), password.c_str()))
         {
@@ -151,7 +162,7 @@ void S_MQTT::publish(bool force)
 {
     String rootTopic = rootTopic;
     JSONVar devicesValues = devices->getForPublish();
-    Serial.println(JSON.stringify(devicesValues));
+    Serial.println("Mqtt.publish: " + JSON.stringify(devicesValues));
 }
 
 void S_MQTT::loop()
@@ -164,6 +175,12 @@ void S_MQTT::loop()
     unsigned long curMillis = millis();
     if (max(curMillis, lastPublished) - min(curMillis, lastPublished) > periodSec * 1000)
     {
+        // Serial.print(max(curMillis, lastPublished) - min(curMillis, lastPublished));
+        // Serial.print(" > ");
+        // Serial.println(periodSec * 1000);
+        //Serial.println("MQTT time: " + now());
+        S_Common::S_Common::getUTime();
+        Serial.println(S_Common::S_Common::getTime());
         if (mqttClient->connected())
         {
             publish(false);
@@ -171,4 +188,5 @@ void S_MQTT::loop()
         }
     }
     mqttClient->loop();
+    devices->loop();
 }

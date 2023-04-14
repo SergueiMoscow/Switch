@@ -1,16 +1,15 @@
 #include "S_Settings.h"
-#include <Arduino.h>
-#include <Arduino_JSON.h>
+// #include <Arduino.h>
+// #include <Arduino_JSON.h>
+
 // #include <ArduinoJson.h>
-#include <S_DS.h>
-#include <FS.h>
-#include <LittleFS.h>
-#include "S_FS.h"
+// #include <S_DS.h>
+// #include <FS.h>
+// #include <LittleFS.h>
 #ifndef COMPONENT_RELIES
 #define COMPONENT_RELIES 1
 #endif
 // #define SETTINGS_FILE "/settings.json"
-
 bool S_Settings::setSettingsFile(String p_settingsFile)
 {
   strcpy(settingsFile, p_settingsFile.c_str());
@@ -22,9 +21,11 @@ bool S_Settings::setSettingsFile(String p_settingsFile)
 void S_Settings::readSettings()
 {
   bool debug = true;
-  S_FS* fs = new S_FS();
-  if (debug) Serial.print("Settings.cpp readSettings ");
-  if (debug) Serial.println(settingsFile);
+  S_FS *fs = new S_FS();
+  if (debug)
+    Serial.print("Settings.cpp readSettings ");
+  if (debug)
+    Serial.println(settingsFile);
   settings = JSON.parse(fs->readFile(settingsFile));
   delete fs;
 }
@@ -211,3 +212,4 @@ String S_Settings::stringReplace(String before)
   }
   return after;
 }
+

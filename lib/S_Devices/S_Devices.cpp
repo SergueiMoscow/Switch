@@ -11,7 +11,7 @@ void S_Devices::init()
     config = JSON.parse(fs.readFile("/devices.json"));
     Serial.println("Devices config:");
     Serial.println(JSON.stringify(config));
-    num_relays = -1;
+    num_relays = 0;
     JSONVar keys = config.keys();
     for (int i = 0; i < keys.length(); i++) {
         String type = clearValue(config[keys[i]]["type"]);
@@ -31,13 +31,20 @@ String S_Devices::clearValue(JSONVar value)
 
 void S_Devices::initRelay(JSONVar device)
 {
-    num_relays++;
+    bool debug = true;
     relays[num_relays][RELAY_PIN] = getPin(device["pin"]);
+    if (debug) Serial.println("initRelay " + (String)num_relays + " pin " + (String)relays[num_relays][RELAY_PIN]);
     String low = "LOW";
-    relays[num_relays][RELAY_ON] = (device["on"] == low ? HIGH : LOW);
+    Serial.println("Device on: " + clearValue(device["on"]));
+    relays[num_relays][RELAY_ON] = (clearValue(device["on"]).equals(low) ? LOW : HIGH);
+    if (debug) Serial.println("ON "  + (String)relays[num_relays][RELAY_ON]);
     relays[num_relays][RELAY_OFF] = (relays[num_relays][RELAY_ON] == LOW ? HIGH : LOW);
+    if (debug) Serial.println("OFF "  + (String)relays[num_relays][RELAY_OFF]);
+    if (debug) Serial.println("LOW "  + (String)LOW);
+    if (debug) Serial.println("HIGH "  + (String)HIGH);
     pinMode(relays[num_relays][RELAY_PIN], OUTPUT);
     digitalWrite(relays[num_relays][RELAY_PIN], relays[num_relays][RELAY_OFF]);
+    num_relays++;
 }
 
 int S_Devices::getPin(JSONVar pin)
@@ -70,18 +77,19 @@ void S_Devices::changeRelay(int relay, String value, String caller)
 
 JSONVar S_Devices::getForPublish()
 {
+    bool debug = false;
     JSONVar keys = config.keys();
     JSONVar result = JSON.parse("{}");
-    Serial.println("Keys lenght: " + (String)keys.length());
+    if (debug) Serial.println("S_Devices.cpp: Keys lenght: " + (String)keys.length());
     for (int i = 0; i < keys.length(); i++) {
         String type = clearValue(config[keys[i]]["type"]);
         String name = clearValue(config[keys[i]]["name"]);
-        Serial.println("Devices: " + type + " - " + name);
+        if (debug) Serial.println("Devices: " + type + " - " + name);
         if (type == "Relay") {
             int relay = getRelayByPin(getPin(config[keys[i]]["pin"]));
             String value = (digitalRead(relays[relay][RELAY_PIN]) == relays[relay][RELAY_ON] ? "on" : "off");
             result[name] = value;
-            Serial.println("Devices: " + name + " = " + value);
+            if (debug) Serial.println("Devices: " + name + " = " + value);
         }
     }
     return result;
@@ -89,10 +97,91 @@ JSONVar S_Devices::getForPublish()
 
 int S_Devices::getRelayByPin(int pin)
 {
+    bool debug = false;
+    if (debug) Serial.println("getRelayByPin " + (String)pin);
+    if (debug) Serial.println("numRelays " + (String)num_relays);
     for (int i = 0; i < num_relays; i++) {
+        if (debug) Serial.println("Checking " + (String)i + " pin " + (String)relays[i][RELAY_PIN]);
         if (relays[i][RELAY_PIN] == pin) {
+            if (debug) Serial.println("Searching " + (String)relays[i][RELAY_PIN]);
+            if (debug) Serial.println("Found " + (String)i);
             return i;
         }
     }
+    if (debug) Serial.println("Relay by pin not found");
     return -1;
+}
+
+void S_Devices::callback(String topic, String value)
+{
+    bool debug = true;
+    int lastSlash = topic.lastIndexOf("/");
+    String name = topic.substring(lastSlash + 1);
+    Serial.println("Devices callback: " + name);
+    JSONVar device = getDeviceByName(name);
+    int pin = getPin(device["pin"]);
+    int relay = getRelayByPin(pin);
+    value.toUpperCase();
+    if (debug) Serial.println("Device callback value received: " + value);
+    if (value.equals("ON")) {
+        Serial.println("ON: Pin: " + (String)relays[relay][RELAY_PIN] + " value " + relays[relay][RELAY_ON]);
+        digitalWrite(relays[relay][RELAY_PIN], relays[relay][RELAY_ON]);
+        relay_turned_on[relay] = millis();
+    }
+    if (value.equals("OFF")) {
+        Serial.println("OFF: Pin: " + (String)relays[relay][RELAY_PIN] + " value " + relays[relay][RELAY_OFF]);
+        digitalWrite(relays[relay][RELAY_PIN], relays[relay][RELAY_OFF]);
+        relay_turned_on[relay] = 0UL;
+    }
+    if (value.toInt() > 0) {
+        Serial.println("NUM: Pin: " + (String)relays[relay][RELAY_PIN] + " value " + relays[relay][RELAY_ON]);
+        digitalWrite(relays[relay][RELAY_PIN], relays[relay][RELAY_ON]);
+        relay_turned_on[relay] = millis();
+        setMillisToTurnOff(relay, value.toInt(), &device);
+    }
+}
+
+void S_Devices::setMillisToTurnOff(int relay, int sec, JSONVar device)
+{
+    if (sec == 0) {
+        unsigned long defaultMaxSec = strtoul(clearValue(device["max_on"]).c_str(), 0, 10);
+        relay_turn_off[relay] = millis() + (defaultMaxSec * 1000UL);
+    } else {
+
+    }
+
+}
+
+int S_Devices::getPinByName(String relayName)
+{
+    JSONVar keys = config.keys();
+    for (int i = 0; i < keys.length(); i++) {
+        String name = clearValue(config[keys[i]]["name"]);
+        if (name == relayName) {
+            return getRelayByPin(getPin(config[keys[i]]["pin"]));
+        }
+    }
+    return -1;
+}
+
+JSONVar S_Devices::getDeviceByName(String relayName)
+{
+    bool debug = false;
+    JSONVar keys = config.keys();
+    for (int i = 0; i < keys.length(); i++) {
+        String name = clearValue(config[keys[i]]["name"]);
+        if (debug) Serial.println("getDeviceByName " + relayName);
+        if (name == relayName) {
+            if (debug) Serial.println("Found");
+            return config[keys[i]];
+        }
+        if (debug) Serial.println("Not found");
+    }
+    return {};
+}
+
+void S_Devices::loop()
+{
+    // Serial.println("Devices loop Unsigned long max");
+    // Serial.println(0UL - 1UL);
 }

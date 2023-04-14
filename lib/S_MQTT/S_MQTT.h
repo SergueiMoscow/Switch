@@ -4,6 +4,7 @@
 #include "S_Settings.h"
 #include "S_FS.h"
 #include "S_Devices.h"
+#include "S_Common.h"
 
 #define MQTT_SETTINGS_FILE "/mqtt.json"
 #define GLOBAL_SETTINGS_FILE "/global.json"
@@ -28,8 +29,10 @@ class S_MQTT
         void setServer();
         String mqttServer;
     public:
+        // S_MQTT(PubSubClient* client, S_Devices* devices);
         void loop();
         void init(PubSubClient* client, S_Devices* devices);
+        // void init();
         String getSubscribeString();
         void connect();
 

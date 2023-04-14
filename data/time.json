@@ -1,0 +1,6 @@
+{
+    "local":
+        ["http://192.168.12.1:8080/time.php?u"],
+    "remote":
+        ["http://bytza.com/time.php?u"]
+}
