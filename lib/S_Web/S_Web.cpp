@@ -1,9 +1,5 @@
 #include <Arduino.h>
 #include "S_Web.h"
-#include "S_FS.h"
-#include <Arduino_JSON.h>
-#include "S_Settings.h"
-#include "buildTime.h"
 
 ESP8266WebServer server(80);
 #define WIFI_JSON "/wifi.json"
@@ -74,7 +70,7 @@ String webMenu(String current)
 void webSettings()
 //-------------------------------------------
 {
-  S_FS fs = S_FS();
+  // S_FS fs = S_FS();
   S_Settings settings = S_Settings(); // JSON.parse(fs.readFile(WIFI_JSON)); // fs.listDir("/");
   settings.setSettingsFile(WIFI_JSON);
   String output = "";
@@ -113,7 +109,7 @@ void webFSBrowser()
 {
   String page_content = "";
   String fileName;
-  int fileSize;
+  // int fileSize;
   LittleFS.begin();
   // download
   // https://esp32.com/viewtopic.php?t=11307
@@ -188,7 +184,7 @@ void webFSBrowser()
   while (file)
   {
     fileName = file.name();
-    fileSize = file.size();
+    // fileSize = file.size();
 #endif
 #ifdef ESP8266
     Dir file = LittleFS.openDir("/");
@@ -196,7 +192,7 @@ void webFSBrowser()
     {
       File file = root.openFile("r");
       fileName = root.fileName();
-      fileSize = file.size();
+      // fileSize = file.size();
 #endif
       page_content += "<tr><td>";
       if (file.isDirectory())
@@ -276,7 +272,7 @@ void webFSBrowser()
 void webWifi()
 //-------------------------------------------
 {
-  S_FS fs = S_FS();
+  // S_FS fs = S_FS();
   S_Settings settings = S_Settings();
   settings.setSettingsFile(WIFI_JSON);
   String output = "";
@@ -341,7 +337,7 @@ void webUpdate() {
   JSONVar otaSettings = JSON.parse(S_FS::fileContent("ota.json"));
   String module_type = S_Settings::delQuotes(otaSettings["type"]);
   String url_update = S_Settings::delQuotes(otaSettings["url_update"]);
-  String version = getBuildVersion();
+  String version = S_OTA::getBuildVersion();
   html += "<title>";
   html += module_type;
   html += "</title></head>";
@@ -480,16 +476,4 @@ void webUpdate() {
   server.send(200, "text/html", html);
 }
 
-String getBuildVersion()
-{
-  String build_version = String(BUILD_YEAR);
-  if (BUILD_MONTH < 10) build_version += "0";
-  build_version += String(BUILD_MONTH);
-  if (BUILD_DAY < 10) build_version += "0";
-  build_version += String(BUILD_DAY);
-  build_version += "_";
-  if (BUILD_HOUR < 10) build_version += "0";
-  build_version += String(BUILD_HOUR);
-  return build_version;
-}
 

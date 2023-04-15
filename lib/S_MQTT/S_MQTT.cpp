@@ -193,6 +193,7 @@ void S_MQTT::loop()
         if (isConfigured && !mqttClient->connected())
         {
             Serial.println("MQTT not connected");
+            loadConfig();
             connect();
         }
         S_Common::S_Common::getUTime();
