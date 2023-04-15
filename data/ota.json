@@ -1,0 +1,7 @@
+{
+    "type": "Switch",
+    "url_update": "http://46.188.82.8/controllers/update.php",
+    "port": 80,
+    "period": 86400,
+    "url_log": "http://46.188.82.8/controllers/log.php"
+}

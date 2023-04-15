@@ -3,6 +3,7 @@
 #include "S_FS.h"
 #include <Arduino_JSON.h>
 #include "S_Settings.h"
+#include "buildTime.h"
 
 ESP8266WebServer server(80);
 #define WIFI_JSON "/wifi.json"
@@ -25,6 +26,7 @@ void webServerSetup()
   server.on("/wifi", webWifi);
   server.on("/spiffs", webFSBrowser);
   server.on("/style.css", webStyle);
+  server.on("/update", webUpdate);
   server.begin();
 } // end webServerStart function
 
@@ -68,40 +70,42 @@ String webMenu(String current)
   return output;
 }
 
-  //--------------------webSettings---------------
-  void webSettings()
-  //-------------------------------------------
+//--------------------webSettings---------------
+void webSettings()
+//-------------------------------------------
+{
+  S_FS fs = S_FS();
+  S_Settings settings = S_Settings(); // JSON.parse(fs.readFile(WIFI_JSON)); // fs.listDir("/");
+  settings.setSettingsFile(WIFI_JSON);
+  String output = "";
+  if (server.hasArg("ssid") && server.hasArg("wifi_pass") && server.hasArg("hostname"))
   {
-    S_FS fs = S_FS();
-    S_Settings settings = S_Settings(); //JSON.parse(fs.readFile(WIFI_JSON)); // fs.listDir("/");
-    settings.setSettingsFile(WIFI_JSON);
-    String output = "";
-    if (server.hasArg("ssid") && server.hasArg("wifi_pass") && server.hasArg("hostname"))
-    {
-      // write settings to file /settings.json
-      settings.setSetting("Wifi_Ssid", server.arg("ssid"));
-      settings.setSetting("Wifi_Pass", server.arg("wifi_pass"));
-      settings.setSetting("Wifi_HostName", server.arg("hostname"));
-      settings.setSetting("Config_User", server.arg("config_user"));
-      settings.setSetting("Config_Pass", server.arg("config_pass"));
-      settings.setSetting("Rely1_Name", server.arg("rely1"));
-      settings.setSetting("Rely2_Name", server.arg("rely2"));
-      settings.setSetting("Manage_Buttons", (server.hasArg("manageButtons") ? "on" : "off"));
+    // write settings to file /settings.json
+    settings.setSetting("Wifi_Ssid", server.arg("ssid"));
+    settings.setSetting("Wifi_Pass", server.arg("wifi_pass"));
+    settings.setSetting("Wifi_HostName", server.arg("hostname"));
+    settings.setSetting("Config_User", server.arg("config_user"));
+    settings.setSetting("Config_Pass", server.arg("config_pass"));
+    settings.setSetting("Rely1_Name", server.arg("rely1"));
+    settings.setSetting("Rely2_Name", server.arg("rely2"));
+    settings.setSetting("Manage_Buttons", (server.hasArg("manageButtons") ? "on" : "off"));
 
-      settings.writeSettings();
-      //fs.writeFile(WIFI_JSON, JSON.stringify(settings).c_str());
-      //writeSettings();
-    }
-    // web page
-    output += fs.readFile("/header.htm");
-    Serial.println(output);
-    output += webMenu("/settings");
-    output += settings.stringReplace(fs.readFile("/settings.htm"));
-    output += fs.readFile("/footer.htm");
-    //String output2 = settings.stringReplace(output);
-    server.send(200, "text/html", output);
+    settings.writeSettings();
+    // fs.writeFile(WIFI_JSON, JSON.stringify(settings).c_str());
+    // writeSettings();
   }
-
+  // web page
+  //output += fs.readFile("header.htm");
+  output += S_FS::fileContent("header.htm");
+  Serial.println(output);
+  output += webMenu("/settings");
+//  output += settings.stringReplace(fs.readFile("settings.htm"));
+  output += settings.stringReplace(S_FS::fileContent("settings.htm"));
+  //output += fs.readFile("footer.htm");
+  output += S_FS::fileContent("footer.htm");
+  // String output2 = settings.stringReplace(output);
+  server.send(200, "text/html", output);
+}
 
 //------------------------------------ webFSBrowser -------
 void webFSBrowser()
@@ -220,105 +224,272 @@ void webFSBrowser()
 #ifdef ESP32
       file = root.openNextFile();
     }
-#elif ESP8266
-}
 #endif
-    page_content += "</table>";
-    if (server.hasArg("view"))
-    {
-      File file = LittleFS.open(server.arg("view"), "r");
-  if (!file) {
-    Serial.println("Failed to open file for reading");
-    page_content += "<b>Failed to open file for reading</b>";
+#ifdef ESP8266
   }
-      page_content += "<hr>";
-      while (file.available())
-      {
-        page_content += file.readString();
-        page_content += "<br>";
-      }
+#endif
+  page_content += "</table>";
+  if (server.hasArg("view"))
+  {
+    File file = LittleFS.open(server.arg("view"), "r");
+    if (!file)
+    {
+      Serial.println("Failed to open file for reading");
+      page_content += "<b>Failed to open file for reading</b>";
+    }
+    page_content += "<hr>";
+    while (file.available())
+    {
+      page_content += file.readString();
       page_content += "<br>";
-      page_content += "<hr>";
-      file.close();
-      // for serial
-      file = LittleFS.open(server.arg("view"), "r");
-      while (file.available())
-        Serial.print(file.readString());
-      Serial.println();
-      file.close();
     }
-    if (server.hasArg("edit"))
-    {
-      page_content += "<form method='POST' action=''>";
-      File file = LittleFS.open(server.arg("edit"), "r");
-      page_content += "<hr><textarea rows=\"10\" cols=\"45\" name=\"fileContent\">";
-      while (file.available())
-        page_content += file.readString();
-      page_content += "</textarea><br>";
-      page_content += "<input type='hidden' name='filename' value='";
-      page_content += server.arg("edit");
-      page_content += "'>";
-      page_content += "<button name='save'>Save</button>";
-      page_content += "<hr>";
-      page_content += "</form>";
-    }
-    LittleFS.end();
-    server.send(200, "text/html", page_content);
+    page_content += "<br>";
+    page_content += "<hr>";
+    file.close();
+    // for serial
+    file = LittleFS.open(server.arg("view"), "r");
+    while (file.available())
+      Serial.print(file.readString());
+    Serial.println();
+    file.close();
   }
+  if (server.hasArg("edit"))
+  {
+    page_content += "<form method='POST' action=''>";
+    File file = LittleFS.open(server.arg("edit"), "r");
+    page_content += "<hr><textarea rows=\"10\" cols=\"45\" name=\"fileContent\">";
+    while (file.available())
+      page_content += file.readString();
+    page_content += "</textarea><br>";
+    page_content += "<input type='hidden' name='filename' value='";
+    page_content += server.arg("edit");
+    page_content += "'>";
+    page_content += "<button name='save'>Save</button>";
+    page_content += "<hr>";
+    page_content += "</form>";
+  }
+  LittleFS.end();
+  server.send(200, "text/html", page_content);
+}
 
 //-------------------- webWifi --------------
 void webWifi()
 //-------------------------------------------
+{
+  S_FS fs = S_FS();
+  S_Settings settings = S_Settings();
+  settings.setSettingsFile(WIFI_JSON);
+  String output = "";
+  if (server.hasArg("ssid") && server.hasArg("wifi_pass"))
   {
-    S_FS fs = S_FS();
-    S_Settings settings = S_Settings();
-    settings.setSettingsFile(WIFI_JSON);
-    String output = "";
-    if (server.hasArg("ssid") && server.hasArg("wifi_pass"))
-    {
-      // write settings to file /wifi.json
-      settings.setSetting(server.arg("ssid"), server.arg("wifi_pass"));
-      settings.writeSettings();
+    // write settings to file /wifi.json
+    settings.setSetting(server.arg("ssid"), server.arg("wifi_pass"));
+    settings.writeSettings();
+  }
+  // web page
+  //output += fs.readFile("header.htm");
+  output += S_FS::fileContent("header.htm");
+  Serial.println(output);
+  output += webMenu("/wifi");
+  //output += settings.stringReplace(fs.readFile("wifi.htm"));
+  output += settings.stringReplace(S_FS::fileContent("wifi.htm"));
+  //output += fs.readFile("footer.htm");
+  output += S_FS::fileContent("footer.htm");
+  // String output2 = settings.stringReplace(output);
+  server.send(200, "text/html", output);
+}
+
+//------------------- webStyle --------------
+void webStyle()
+//-------------------------------------------
+{
+  //S_FS fs = S_FS();
+  String output = S_FS::fileContent("style.css");
+  server.send(200, "text/plain", output);
+}
+
+//--------------------- webLogin ------------
+// void webLogin()
+//-------------------------------------------
+// {
+//   Serial.println("Web login");
+//   if (server.hasArg("login") && server.hasArg("pass"))
+//   {
+//     if (String(server.arg("login")) == commonSettings.getSetting("Config_User", "admin") &&
+//         String(server.arg("pass")) == commonSettings.getSetting("Config_Pass", "admin"))
+//     {
+//     //  webOperate(); Нет в этом проекте
+//       return;
+//     }
+//   }
+//   String output = fileContent("/index.htm");
+//   server.send(200, "text/html", output);
+// }
+
+void webReset()
+{
+  ESP.restart();
+}
+
+void webUpdate() {
+
+  Serial.println("WebUpdate");
+  static bool varAutoUpdate = false;
+  //String s = "<!DOCTYPE HTML>\r\n<html><head><meta charset=\"utf-8\"><title>";
+  //S_FS fs = S_FS();
+  String html = S_FS::fileContent("header.htm");
+  JSONVar otaSettings = JSON.parse(S_FS::fileContent("ota.json"));
+  String module_type = S_Settings::delQuotes(otaSettings["type"]);
+  String url_update = S_Settings::delQuotes(otaSettings["url_update"]);
+  String version = getBuildVersion();
+  html += "<title>";
+  html += module_type;
+  html += "</title></head>";
+  html += webMenu("/update");
+  html += "<br><br><a href='/update?reboot=true'>Reboot</a>";
+  html += "<br><br><a href='/update?serialcheck=true'>Serialcheck</a>";
+
+  html += "<br>";
+
+  html += "<br><a href='/update?otaupdateinfo=true'>OTAWEB firmware check</a>";
+
+  if (ESP.getFlashChipSize() > 900000)
+  {
+    html += "<br><font color=\"red\">Check your new firmware compile time size! must be 1mbyte+</font>";
+  }
+  else
+  {
+    html += "<br><font color=\"red\">Your flash ";
+    html += String(ESP.getFlashChipSize());
+    html += " bytes only, it's too small for OTA WEB</font>";
+  }
+  //s += "<br><a href='/update&otaupdate'>OTAWEB firmware update</a>";
+
+  html += "<br>";
+  html += "module type: ";
+  html += module_type;
+  html += "<br>";
+  html += "module fw: ";
+  html += version;
+  WiFiClient espClient;
+
+  if (server.hasArg("otaupdateinfo"))
+  {
+    html += "<br>";
+    html += "server firmware: ";
+    html += url_update + "?info=true&module=" + module_type;
+
+    HTTPClient http;
+    http.begin(espClient, url_update + "?info=true&module=" + module_type);
+    int httpCode = http.GET();
+    if (httpCode > 0) {
+      // HTTP header has been send and Server response header has been handled
+      //USE_SERIAL.printf("[HTTP] GET... code: %d\n", httpCode);
+      // file found at server
+      if (httpCode == HTTP_CODE_OK) {
+        String payload = http.getString();
+        // Serial.println(payload);
+        if (payload.length() > 0 && payload != "firmware type error")
+        {
+          html += payload;
+          if (payload != version)
+            html += "<br><a href='/update?otaupdate=true'>OTAWEB firmware update</a>";
+        }
+        else
+          html += "server error";
+      }
+    } else {
+      //USE_SERIAL.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+      html += "[HTTP] GET... failed";
     }
-    // web page
-    output += fs.readFile("/header.htm");
-    Serial.println(output);
-    output += webMenu("/wifi");
-    output += settings.stringReplace(fs.readFile("/wifi.htm"));
-    output += fs.readFile("/footer.htm");
-    //String output2 = settings.stringReplace(output);
-    server.send(200, "text/html", output);
-  }
 
-  //------------------- webStyle --------------
-  void webStyle()
-  //-------------------------------------------
+    http.end();
+  }
+  else if (server.hasArg("otaupdate"))
   {
-    S_FS fs = S_FS();
-    String output = fs.readFile("/style.css");
-    server.send(200, "text/plain", output);
+    Serial.println("OTAWEB update request");
 
+    // ESP 8266
+    // sss
+    //t_httpUpdate_return ret = ESPhttpUpdate.update(espClient, OTAWEB_URL, buildVersion);
+    // ESP32
+    WiFiClient espClient;
+    if (varAutoUpdate) {
+      html = "HTTP/1.1 307 Temporary Redirect";
+      html += "\r\nLocation: /update";
+      html += "\r\n\r\n";
+      server.sendContent(html);
+      return;
+    } 
+    
+    t_httpUpdate_return ret;
+    varAutoUpdate = true;
+
+    ret = HTTP_UPDATE_OK;
+    html += "<br>";
+    html += "<br>";
+
+    switch (ret) {
+      case HTTP_UPDATE_FAILED:
+        html += url_update + "?module=" + module_type;
+        html += "<br>HTTP_UPDATE_FAILD Error (";
+#ifdef ESP32
+        html += httpUpdate.getLastError();
+        html += "): ";
+        html += httpUpdate.getLastErrorString().c_str();
+#endif
+#ifdef ESP8266
+        html += ESPhttpUpdate.getLastError();
+        html += "): ";
+        html += ESPhttpUpdate.getLastErrorString().c_str();
+#endif
+        break;
+
+      case HTTP_UPDATE_NO_UPDATES:
+        html += "HTTP_UPDATE_NO_UPDATES";
+        break;
+
+      case HTTP_UPDATE_OK:
+        html += "HTTP_UPDATE_OK";
+        break;
+    }
   }
-
-  //--------------------- webLogin ------------
-  // void webLogin()
-  //-------------------------------------------
-  // {
-  //   Serial.println("Web login");
-  //   if (server.hasArg("login") && server.hasArg("pass"))
-  //   {
-  //     if (String(server.arg("login")) == commonSettings.getSetting("Config_User", "admin") &&
-  //         String(server.arg("pass")) == commonSettings.getSetting("Config_Pass", "admin"))
-  //     {
-  //     //  webOperate(); Нет в этом проекте
-  //       return;
-  //     }
-  //   }
-  //   String output = fileContent("/index.htm");
-  //   server.send(200, "text/html", output);
-  // }
-
-  void webReset()
+  else if (   server.hasArg("serialcheck"))
   {
-    ESP.restart();
+    Serial.println("serial check");
+    html = "HTTP/1.1 307 Temporary Redirect";
+    html += "\r\nLocation: /update";
+    html += "\r\n\r\n";
+    server.sendContent(html);
+    return;
   }
+  else if (   server.hasArg("reboot"))
+  {
+    html = "<head>";
+    html += "<meta http-equiv=\"refresh\" content=\"20;url=/\">";
+    html += "</head>";
+    html += "REDIRECTING in 20S";
+
+
+
+    html += "</html>\r\n\r\n";
+    /// TODO: Так не катит, надо как-то контролировать
+    // rebootReq = true;
+  }
+  html += "</html>\r\n\r\n";
+  server.send(200, "text/html", html);
+}
+
+String getBuildVersion()
+{
+  String build_version = String(BUILD_YEAR);
+  if (BUILD_MONTH < 10) build_version += "0";
+  build_version += String(BUILD_MONTH);
+  if (BUILD_DAY < 10) build_version += "0";
+  build_version += String(BUILD_DAY);
+  build_version += "_";
+  if (BUILD_HOUR < 10) build_version += "0";
+  build_version += String(BUILD_HOUR);
+  return build_version;
+}
+

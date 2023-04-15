@@ -10,6 +10,8 @@ class S_FS
     JSONVar listDir(const char *dirname);
     String readFile(const char *path);
     void writeFile(const char *path, const char *message);
+    static String fileContent(const char *path);
+
     // String listDir();
 };
 #endif

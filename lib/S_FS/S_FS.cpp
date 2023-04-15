@@ -73,6 +73,23 @@ String S_FS::readFile(const char *path) {
   return result;
 }
 
+String S_FS::fileContent(const char *path) {
+  Serial.printf("Reading file: %s\n", path);
+
+  File file = LittleFS.open(path, "r");
+  if (!file) {
+    Serial.println("Failed to open file for reading");
+    return "";
+  }
+  String result = "";
+  while (file.available()) {
+    result += file.readString();
+  }
+  file.close();
+  return result;
+}
+
+
 void writeFile(const char *path, const char *message) {
   Serial.printf("Writing file: %s\n", path);
 

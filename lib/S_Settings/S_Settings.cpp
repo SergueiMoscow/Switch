@@ -213,3 +213,16 @@ String S_Settings::stringReplace(String before)
   return after;
 }
 
+String S_Settings::delQuotes(JSONVar value)
+{
+    String result = JSON.stringify(value);
+    result.replace("\"", "");
+    return result;
+}
+
+String S_Settings::delQuotes(String value)
+{
+    value.replace("\"", "");
+    return value;
+}
+

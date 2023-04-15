@@ -11,16 +11,15 @@
   private:
     JSONVar settings;
     char settingsFile[20];
-    void setTime();
 
   public:
     void readSettings();
     void writeSettings();
     String getSetting(String key, String def_value);
-    String getSetting(String key);
     void setSetting(String key, String value);
     bool setSettingsFile(String settingsFile);
     String stringReplace(String before);
-    static String getURL(String url);
+    static String delQuotes(JSONVar value);
+    static String delQuotes(String value);
   };
 #endif
