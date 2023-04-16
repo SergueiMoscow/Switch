@@ -23,4 +23,9 @@ class S_OTA
         static inline JSONVar otaSettings;
         static inline unsigned long lastCheckUpdate;
 };
+
+void update_started();
+void update_finished();
+void update_progress(int cur, int total);
+void update_error(int err);
 #endif
