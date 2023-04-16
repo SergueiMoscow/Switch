@@ -11,7 +11,7 @@
 #include "S_MQTT.h"
 // using std::string;
 #include "S_Common.h"
-using S_Common::S_Common;
+#include "S_OTA.h"
 
 // SSettings commonSettings;
 #define SETTINGS_FILE "/settings.json"
@@ -35,6 +35,7 @@ void setup()
   devices.init();
   sMQTT.init(mqttClientPtr, devicesPtr);
   S_Common::S_Common::setUTime();
+  S_OTA::loadConfig();
 }
 
 void loop()
@@ -42,5 +43,6 @@ void loop()
   webServerLoop();
   sWiFi.WiFiLoop();
   sMQTT.loop();
+  S_OTA::loop();
   delay(300);
 }

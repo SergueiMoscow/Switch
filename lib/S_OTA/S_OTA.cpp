@@ -3,7 +3,11 @@
   void S_OTA::loadConfig()
   {
     otaSettings = JSON.parse(S_FS::fileContent("ota.json"));
-
+    checkPeriod = otaSettings["period"];
+    module_type = S_Settings::delQuotes(otaSettings["type"]);
+    Serial.print("Check updates every ");
+    Serial.print(checkPeriod);
+    Serial.println(" seconds (module" + module_type + ")");
   }
 
   //------------------------------autoUpdate-------------
@@ -11,15 +15,12 @@
   {
     Serial.println("Begin autoupdate");
     String add_parameter = "&log=var:";
-    //  add_parameter+=String(lastCheckUpdateHour);
-    //  add_parameter+=";now:";
-    //  add_parameter+=String(timeRTC.hours);
     JSONVar otaSettings = JSON.parse(S_FS::fileContent("ota.json"));
     String serverVersion = getServerVersion(add_parameter);
     String buildVersion = getBuildVersion();
     String update_url = S_Settings::delQuotes(otaSettings["url_update"]);
     WiFiClient wifiClient;
-
+    Serial.println("Server " + serverVersion +" local: " + buildVersion);
     if (serverVersion > buildVersion)
     {
       Serial.print("Server version:");
@@ -54,10 +55,12 @@
   //------------------------------getServerVersion-------------
   String S_OTA::getServerVersion(String get_parameter)
   {
+    WiFiClient wifiClient;
     HTTPClient http;
-    String url_string = "?info=true&module=" + module_type;
+    String url_string = S_Settings::delQuotes(otaSettings["url_update"]) + "?info=true&module=" + module_type;
     url_string += get_parameter;
-    http.begin(url_string);
+    http.begin(wifiClient, url_string);
+    Serial.println("GetServerVersion from " + url_string);
     String playload = "0";
     int httpCode = http.GET();
     if (httpCode > 0) {
@@ -70,13 +73,14 @@
       else
       {
         playload = "0";
+        Serial.println("HTTP ERROR: " + (String)httpCode);
       }
     }
     http.end();
     return playload;
   }
 
-  String S_OTA::getBuildVersion()
+String S_OTA::getBuildVersion()
 {
   String build_version = String(BUILD_YEAR);
   if (BUILD_MONTH < 10) build_version += "0";
@@ -89,3 +93,10 @@
   return build_version;
 }
 
+void S_OTA::loop()
+{
+  unsigned long currentTime = S_Common::S_Common::getUTime();
+  if (currentTime - lastCheckUpdate > checkPeriod) {
+    autoUpdate();
+  }
+}

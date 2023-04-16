@@ -3,6 +3,8 @@
         "*.embeddedhtml": "html",
         "*.tpl": "php",
         "*.tcc": "cpp",
-        "string": "cpp"
+        "string": "cpp",
+        "initializer_list": "cpp",
+        "ranges": "cpp"
     }
 }
