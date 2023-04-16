@@ -2,8 +2,8 @@
     "device1": {
         "type": "Relay",
         "pin": "D3",
-        "name": "Relay_Kitchen",
-        "description": "Тёплый пол на кухне",
+        "name": "Light",
+        "description": "Свет",
         "on": "LOW",
         "automation1": {
             "type": "time",
