@@ -106,6 +106,7 @@ void S_OTA::loop()
   unsigned long currentTime = S_Common::S_Common::getUTime();
   if (currentTime - lastCheckUpdate > checkPeriod) {
     autoUpdate();
+    lastCheckUpdate = S_Common::S_Common::getUTime();
   }
 }
 

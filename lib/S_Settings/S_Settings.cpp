@@ -1,11 +1,4 @@
 #include "S_Settings.h"
-// #include <Arduino.h>
-// #include <Arduino_JSON.h>
-
-// #include <ArduinoJson.h>
-// #include <S_DS.h>
-// #include <FS.h>
-// #include <LittleFS.h>
 #ifndef COMPONENT_RELIES
 #define COMPONENT_RELIES 1
 #endif
@@ -68,15 +61,6 @@ void S_Settings::setSetting(String key, String value)
 
 String S_Settings::stringReplace(String before)
 {
-  // extern PubSubClient client;
-  //  extern String otaWebModuleType;
-  //  extern String activeSSID, buildVersion;
-  //  extern int relies[4];
-  //  extern String getServerVersion(String get_parameter);
-  //  extern String getRootTopic();
-  //  extern String millis_to_dhms(long millis1);
-  //  extern S_DS ds_ctrl;
-  //  extern String getTime(String type="A");
 
   bool debug = false;
   String after = before;
@@ -109,32 +93,6 @@ String S_Settings::stringReplace(String before)
   // Comfig admin
   stringReplace["CONFIG_USER"] = this->getSetting("Config_User", "admin");
   stringReplace["CONFIG_PASS"] = this->getSetting("Config_Pass", "admin");
-// Components
-// Relies
-// // #ifdef COMPONENT_RELIES >= 1
-// //   stringReplace["MQTT_RELY1"] = this->getSetting("MQTT_Rely1", "rely1");
-// //   stringReplace["RELY1_NAME"] = this->getSetting("Rely1_Name", "Rely1");
-// //   stringReplace["RELY1_COLOR"] = (digitalRead(relies[0]) == LOW ? "red" : "green");
-// //   stringReplace["RELY1_STATUS"] = (digitalRead(relies[0]) == LOW ? "ON" : "OFF");
-// //   stringReplace["RELY1_SWITCH_TEXT"] = (digitalRead(relies[0]) == LOW ? "Выключить" : "Включить");
-// //   stringReplace["RELY1_SWITCH_VALUE"] = (digitalRead(relies[0]) == LOW ? "OFF" : "ON");
-// // #endif
-// #ifdef COMPONENT_RELIES >=2
-//   stringReplace["MQTT_RELY2"] = this->getSetting("MQTT_Rely2", "rely2");
-//   stringReplace["RELY2_NAME"] = this->getSetting("Rely2_Name", "Rely2");
-//   stringReplace["RELY2_COLOR"] = (digitalRead(relies[1]) == LOW ? "red" : "green");
-//   stringReplace["RELY2_STATUS"] = (digitalRead(relies[1]) == LOW ? "ON" : "OFF");
-//   stringReplace["RELY2_SWITCH_TEXT"] = (digitalRead(relies[1]) == LOW ? "Выключить" : "Включить");
-//   stringReplace["RELY2_SWITCH_VALUE"] = (digitalRead(relies[1]) == LOW ? "OFF" : "ON");
-// #endif
-// #ifdef COMPONENT_RELIES >=3
-//   stringReplace["MQTT_RELY3"] = this->getSetting("MQTT_Rely3", "rely3");
-//   stringReplace["RELY3_NAME"] = this->getSetting("Rely3_Name", "Rely3");
-//   stringReplace["RELY3_COLOR"] = (digitalRead(relies[2]) == LOW ? "red" : "green");
-//   stringReplace["RELY3_STATUS"] = (digitalRead(relies[2]) == LOW ? "ON" : "OFF");
-//   stringReplace["RELY3_SWITCH_TEXT"] = (digitalRead(relies[2]) == LOW ? "Выключить" : "Включить");
-//   stringReplace["RELY3_SWITCH_VALUE"] = (digitalRead(relies[2]) == LOW ? "OFF" : "ON");
-// #endif
 #ifdef COMPONENT_WATT_COUNTER
   stringReplace["Period1_Begin"] = this->getSetting("Period1_Begin", "0");
   stringReplace["Period1_End"] = this->getSetting("Period1_End", "7");
@@ -155,24 +113,6 @@ String S_Settings::stringReplace(String before)
   stringReplace["Period5_Mode"] = this->getSetting("Period5_Mode", "2");
   stringReplace["Period6_Mode"] = this->getSetting("Period6_Mode", "3");
 #endif
-  // stringReplace["TIMEUP"] = millis_to_dhms(millis());
-  // DS
-  // for(int i=0;i<ds_ctrl.col_ds();i++)
-  //   stringReplace["DS"+String(i)+"_VALUE"] = ds_ctrl.getTemp(i);
-
-  // Hasta ahi NO se reconnecta MQTT
-
-  //    stringReplace["ESP32_VALUE"] = getExtTemp(); //getTempESP();
-  //    stringReplace["TEMP1_VALUE"] = p_dhtTemp;
-  //    stringReplace["TEMP2_VALUE"] = p_dsTemp;
-  //    stringReplace["HUM_VALUE"] = p_humidity;
-  //    stringReplace["SMOKE_VALUE"] = p_smoke;
-
-  // Module type, version
-  // stringReplace["MODULE"] = otaWebModuleType;
-  // stringReplace["BUILD_VERSION"] = buildVersion;
-  // Проблемная строка (перезагрузка MQTT)
-  // stringReplace["SERVER_VERSION"] = getServerVersion("");
 
 #ifdef COMPONENT_BLYNK
   stringReplace["BLYNK_TOKEN"] = this->getSetting("Blynk_Token", "");

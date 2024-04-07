@@ -35,14 +35,14 @@ void setup()
   devices.init();
   sMQTT.init(mqttClientPtr, devicesPtr);
   S_Common::S_Common::setUTime();
-  S_OTA::loadConfig();
+  // S_OTA::loadConfig();
 }
 
 void loop()
 {
   webServerLoop();
   sWiFi.WiFiLoop();
-  sMQTT.loop();
-  S_OTA::loop();
+  // sMQTT.loop();
+  // S_OTA::loop();
   delay(300);
 }

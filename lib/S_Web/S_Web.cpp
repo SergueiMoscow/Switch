@@ -2,14 +2,43 @@
 #include "S_Web.h"
 
 ESP8266WebServer server(80);
+File fsUploadFile;
 #define WIFI_JSON "/wifi.json"
 
-// void S_Web::setup()
-// {
-//     server.on("/", test);
-//     server.on("/spiffs", webFSBrowser);
-//     server.begin();
-// }
+void replyOK() {
+  server.send(200, "text/plain", "");
+}
+
+void handleFileUpload() {
+  Serial.println("handleFileUpload ");
+    String filename;
+    HTTPUpload& upload = server.upload();
+    Serial.print("Upload status: ");
+    Serial.println(upload.status);
+    if (upload.status == UPLOAD_FILE_START) {
+      filename = upload.filename;
+      Serial.print("Upload file start ");
+      Serial.println(filename);
+      if (!filename.startsWith("/")) filename = "/" + filename;
+      fsUploadFile = LittleFS.open(filename, "w");
+      if (!fsUploadFile) { Serial.print("Error creating file"); Serial.println(filename); }
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+      Serial.print("handleFileUpload Data: "); Serial.println(upload.currentSize);
+      if (fsUploadFile)
+      {
+        fsUploadFile.write(upload.buf, upload.currentSize);
+        Serial.println("Uploading: ");
+      }
+    } else if (upload.status == UPLOAD_FILE_END) {
+      Serial.println("Upload file end");
+      if (fsUploadFile)
+        fsUploadFile.close();
+      Serial.print("handleFileUpload Size: "); Serial.println(upload.totalSize);
+      server.sendHeader("Location", "/spiffs");
+      server.send(303);
+    }
+}
+
 
 //-------------------------------------------
 void webServerSetup()
@@ -23,6 +52,8 @@ void webServerSetup()
   server.on("/spiffs", webFSBrowser);
   server.on("/style.css", webStyle);
   server.on("/update", webUpdate);
+  server.on("/upload", HTTP_POST, replyOK, handleFileUpload);
+
   server.begin();
 } // end webServerStart function
 
@@ -114,7 +145,7 @@ void webFSBrowser()
   // download
   // https://esp32.com/viewtopic.php?t=11307
   // AsyncWebServerResponse *response = server.beginResponse(LittleFS, server.arg("filename"), String(), true);
-  Serial.println("Вход webFSBrowser");
+  Serial.println("Вход: webFSBrowser");
   if (server.hasArg("format"))
   {
     Serial.println("Formatting");
@@ -133,7 +164,7 @@ void webFSBrowser()
     Serial.println("File: " + server.arg("filename"));
     Serial.println("Upload: " + server.arg("upload"));
   }
-  Serial.println("Test" + server.arg("test"));
+  Serial.println("Test filename" + server.arg("filename"));
   if (server.hasArg("NewFile"))
   {
     String page_content = "";
@@ -172,7 +203,7 @@ void webFSBrowser()
   page_content += "<input type='text' name='NewItemName'><br>";
   page_content += "<button name='NewFile'>New File</button>";
   page_content += "</form>";
-  page_content += "<form method ='POST' action='' enctype='multipart/form-data'>";
+  page_content += "<form method =\"POST\" action=\"/upload\" enctype=\"multipart/form-data\" content-type=\"multipart/form-data\">";
   page_content += "<br><input name='filename' type='file'><br>";
   page_content += "<input type='submit' name='upload' value='upload file'>";
   page_content += "</form>";
@@ -192,7 +223,6 @@ void webFSBrowser()
     {
       File file = root.openFile("r");
       fileName = root.fileName();
-      // fileSize = file.size();
 #endif
       page_content += "<tr><td>";
       if (file.isDirectory())
@@ -264,7 +294,6 @@ void webFSBrowser()
     page_content += "<hr>";
     page_content += "</form>";
   }
-  LittleFS.end();
   server.send(200, "text/html", page_content);
 }
 
@@ -272,7 +301,6 @@ void webFSBrowser()
 void webWifi()
 //-------------------------------------------
 {
-  // S_FS fs = S_FS();
   S_Settings settings = S_Settings();
   settings.setSettingsFile(WIFI_JSON);
   String output = "";
@@ -331,8 +359,6 @@ void webUpdate() {
 
   Serial.println("WebUpdate");
   static bool varAutoUpdate = false;
-  //String s = "<!DOCTYPE HTML>\r\n<html><head><meta charset=\"utf-8\"><title>";
-  //S_FS fs = S_FS();
   String html = S_FS::fileContent("header.htm");
   JSONVar otaSettings = JSON.parse(S_FS::fileContent("ota.json"));
   String module_type = S_Settings::delQuotes(otaSettings["type"]);
@@ -379,12 +405,9 @@ void webUpdate() {
     http.begin(espClient, url_update + "?info=true&module=" + module_type);
     int httpCode = http.GET();
     if (httpCode > 0) {
-      // HTTP header has been send and Server response header has been handled
-      //USE_SERIAL.printf("[HTTP] GET... code: %d\n", httpCode);
       // file found at server
       if (httpCode == HTTP_CODE_OK) {
         String payload = http.getString();
-        // Serial.println(payload);
         if (payload.length() > 0 && payload != "firmware type error")
         {
           html += payload;
@@ -395,7 +418,6 @@ void webUpdate() {
           html += "server error";
       }
     } else {
-      //USE_SERIAL.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
       html += "[HTTP] GET... failed";
     }
 
@@ -405,10 +427,6 @@ void webUpdate() {
   {
     Serial.println("OTAWEB update request");
 
-    // ESP 8266
-    // sss
-    //t_httpUpdate_return ret = ESPhttpUpdate.update(espClient, OTAWEB_URL, buildVersion);
-    // ESP32
     WiFiClient espClient;
     if (varAutoUpdate) {
       html = "HTTP/1.1 307 Temporary Redirect";
@@ -475,5 +493,3 @@ void webUpdate() {
   html += "</html>\r\n\r\n";
   server.send(200, "text/html", html);
 }
-
-

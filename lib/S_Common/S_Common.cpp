@@ -25,7 +25,7 @@ namespace S_Common
         bool debug = false;
         if (debug) Serial.println("GETTING TIME:");
         unsigned long uTime = now();
-        if (debug) Serial.println(uTime);
+        // if (debug) Serial.println(uTime);
         return uTime;
     }
 
@@ -92,43 +92,6 @@ namespace S_Common
         return playload;
     }
 
-    // void S_Common::checkTime(String url)
-    // {
-    //     static unsigned long msCheck = 0;
-    //     static unsigned long lastGetByUrl = 0;
-    //     static int arrLastGetByUrl[6];
-    //     long curMillis = millis();
-    //     String formattedDate, strJsonDate;
-    //     String dayStamp;
-    //     String timeStamp;
-    //     JSONVar jsonDate;
-    //     int arrTime[6];
-
-    //     if ((curMillis > msCheck ? curMillis - msCheck : msCheck - curMillis) > MILLIS_CHECK_TIME || msCheck == 0)
-    //     {
-    //         strJsonDate = getURL(url);
-    //         Serial.print(url);
-    //         Serial.println(strJsonDate);
-    //         lastGetByUrl = millis();
-    //         StaticJsonDocument<512> jsonDate;
-    //         deserializeJson(jsonDate, strJsonDate);
-    //         // jsonDate=JSON.parse(strJsonDate);
-    //         arrLastGetByUrl[0] = jsonDate["Y"];
-    //         arrLastGetByUrl[1] = jsonDate["m"];
-    //         arrLastGetByUrl[2] = jsonDate["d"];
-    //         arrLastGetByUrl[3] = jsonDate["H"];
-    //         arrLastGetByUrl[4] = jsonDate["i"];
-    //         arrLastGetByUrl[5] = jsonDate["s"];
-    //         setTime(arrLastGetByUrl[HOUR], arrLastGetByUrl[MIN], arrLastGetByUrl[SEC], arrLastGetByUrl[DAY], arrLastGetByUrl[MONTH], arrLastGetByUrl[YEAR]);
-    //         Serial.print("Checktime passed(lib): ");
-    //         Serial.print(day());
-    //         Serial.print(" ");
-    //         Serial.print(hour());
-    //         Serial.print(":");
-    //         Serial.println(minute());
-    //         msCheck = millis();
-    //     }
-    // }
 
     bool S_Common::checkTime(String url)
     {
@@ -150,7 +113,7 @@ namespace S_Common
             if (debug) Serial.println(strJsonDate);
             lastGetByUrl = millis();
             jsonDate=JSON.parse(strJsonDate);
-            Serial.println(JSON.stringify(jsonDate["m"]) + "-" + JSON.stringify(jsonDate["d"]));
+            // Serial.println(JSON.stringify(jsonDate["m"]) + "-" + JSON.stringify(jsonDate["d"]));
             arrLastGetByUrl[0] = deleteQuotes(jsonDate["Y"]).toInt();
             arrLastGetByUrl[1] = deleteQuotes(jsonDate["m"]).toInt();
             arrLastGetByUrl[2] = deleteQuotes(jsonDate["d"]).toInt();

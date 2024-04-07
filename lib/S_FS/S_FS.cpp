@@ -57,6 +57,8 @@ JSONVar S_FS::listDir(const char *dirname)
     return JSON.parse(filesList);
 }
 
+// TODO: readFile и fileContent - идентичны. Один из ни static.
+// Переделать код и оставить один (static)
 String S_FS::readFile(const char *path) {
   Serial.printf("Reading file: %s\n", path);
 
@@ -90,7 +92,7 @@ String S_FS::fileContent(const char *path) {
 }
 
 
-void writeFile(const char *path, const char *message) {
+void S_FS::writeFile(const char *path, const char *message) {
   Serial.printf("Writing file: %s\n", path);
 
   File file = LittleFS.open(path, "w");

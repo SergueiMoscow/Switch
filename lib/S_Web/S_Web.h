@@ -9,6 +9,7 @@
 #include "S_Settings.h"
 #include "buildTime.h"
 #include "S_OTA.h"
+#include <SPI.h>
 
 // class S_Web
 // {
@@ -27,4 +28,5 @@ void test();
 void webReset();
 void webUpdate();
 static String getBuildVersion();
+void handleFileUpload();
 // };
