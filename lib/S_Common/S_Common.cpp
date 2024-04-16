@@ -1,4 +1,7 @@
 #include "S_Common.h"
+// #include <ESP8266WiFi.h>
+// #include <ArduinoJson.h>
+
 namespace S_Common
 {
 
@@ -82,6 +85,8 @@ namespace S_Common
             if (httpCode == HTTP_CODE_OK)
             {
                 playload = http.getString();
+                Serial.print("S_Common: playload:");
+                Serial.println(playload);
             } // httpCode ok
             else
             {
@@ -92,18 +97,16 @@ namespace S_Common
         return playload;
     }
 
-
     bool S_Common::checkTime(String url)
     {
+        bool debug = false;
         static unsigned long msCheck = 0;
         static unsigned long lastGetByUrl = 0;
-        static int arrLastGetByUrl[6];
-        long curMillis = millis();
+        unsigned long curMillis = millis();
         String strJsonDate;
         String dayStamp;
         String timeStamp;
         JSONVar jsonDate;
-        int arrTime[6];
 
         if ((curMillis > msCheck ? curMillis - msCheck : msCheck - curMillis) > MILLIS_CHECK_TIME || msCheck == 0)
         {
@@ -113,31 +116,25 @@ namespace S_Common
             if (debug) Serial.println(strJsonDate);
             lastGetByUrl = millis();
             jsonDate=JSON.parse(strJsonDate);
-            // Serial.println(JSON.stringify(jsonDate["m"]) + "-" + JSON.stringify(jsonDate["d"]));
-            arrLastGetByUrl[0] = deleteQuotes(jsonDate["Y"]).toInt();
-            arrLastGetByUrl[1] = deleteQuotes(jsonDate["m"]).toInt();
-            arrLastGetByUrl[2] = deleteQuotes(jsonDate["d"]).toInt();
-            arrLastGetByUrl[3] = deleteQuotes(jsonDate["H"]).toInt();
-            arrLastGetByUrl[4] = deleteQuotes(jsonDate["i"]).toInt();
-            arrLastGetByUrl[5] = deleteQuotes(jsonDate["s"]).toInt();
-            setTime(arrLastGetByUrl[HOUR], arrLastGetByUrl[MIN], arrLastGetByUrl[SEC], arrLastGetByUrl[DAY], arrLastGetByUrl[MONTH], arrLastGetByUrl[YEAR]);
+            long unixtime = (long)jsonDate["unixtime"];
             if (debug) {
-                Serial.print("Checktime passed(lib): ");
-                Serial.print(day());
-                Serial.print(" ");
-                Serial.print(hour());
-                Serial.print(":");
-                Serial.println(minute());
+                Serial.print("S_Common.cpp: jsonDate: ");
+                Serial.println(jsonDate);
+                Serial.print("S_Common.cpp: unixtime: ");
+                Serial.println(JSON.stringify(jsonDate["unixtime"]));
+                Serial.println(JSON.stringify(jsonDate["datetime"]));
+                Serial.print("Long unixtime: ");
+                Serial.println(unixtime);
             }
+            setTime(unixtime);
         }
         msCheck = millis();
         return now() > (time_t)(1681479472UL);
     }
 
-        String S_Common::deleteQuotes(String str)
-        {
-            str.replace("\"", "");
-            return str;
-        }
-
+    String S_Common::deleteQuotes(String str)
+    {
+        str.replace("\"", "");
+        return str;
+    }
 }

@@ -75,6 +75,10 @@ String S_FS::readFile(const char *path) {
   return result;
 }
 
+bool S_FS::exists(const char *path) {
+  return LittleFS.exists(path);
+}
+
 String S_FS::fileContent(const char *path) {
   Serial.printf("Reading file: %s\n", path);
 

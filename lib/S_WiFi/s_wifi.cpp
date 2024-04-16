@@ -215,9 +215,12 @@ void S_WiFi::WiFiLoop()
 bool S_WiFi::accessPoint()
 //------------------- accessPoint -------------------
 {
-  Serial.println("Trying to create AP");
+  Serial.println("Trying to create Access Point");
   WiFi.mode(WIFI_AP);
   mode = AP;
   boolean result = WiFi.softAP("ESPsoftAP_01", "pass-to-soft-AP");
+  if (result) {
+    Serial.println("AP created");
+  }
   return result;
 }

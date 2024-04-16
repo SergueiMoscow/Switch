@@ -8,6 +8,7 @@ S_Devices::S_Devices()
 void S_Devices::init()
 {
     S_FS fs = S_FS();
+    if (!fs.exists("/devices.json")) {return;}
     config = JSON.parse(fs.readFile("/devices.json"));
     Serial.println("Devices config:");
     Serial.println(JSON.stringify(config));

@@ -170,12 +170,12 @@ void S_MQTT::setRootTopic()
 
 void S_MQTT::publish(bool force)
 {
-    String rootTopic = rootTopic;
+    String publishTopic = rootTopic + "state";
     JSONVar devicesValues = devices->getForPublish();
     devicesValues["time"] = S_Common::S_Common::getTime();
-    Serial.println("Mqtt.publish: " + JSON.stringify(devicesValues));
+    Serial.println("Mqtt.publish: " + publishTopic + JSON.stringify(devicesValues));
 
-    mqttClient->publish((rootTopic + "state").c_str(), JSON.stringify(devicesValues).c_str(), true);
+    mqttClient->publish((publishTopic).c_str(), JSON.stringify(devicesValues).c_str(), true);
     JSONVar keys = devicesValues.keys();
     for (int i = 0; i < keys.length(); i++) {
         String topic = rootTopic + clearValue(keys[i]);

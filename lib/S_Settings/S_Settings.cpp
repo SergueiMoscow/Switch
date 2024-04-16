@@ -19,7 +19,15 @@ void S_Settings::readSettings()
     Serial.print("Settings.cpp readSettings ");
   if (debug)
     Serial.println(settingsFile);
-  settings = JSON.parse(fs->readFile(settingsFile));
+  if(fs->exists(settingsFile))
+  {
+    settings = JSON.parse(fs->readFile(settingsFile));
+  }
+  else
+  {
+    Serial.println("Settings file does not exist");
+    settings = null;
+  }
   delete fs;
 }
 

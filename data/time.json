@@ -1,6 +1,6 @@
 {
     "local":
-        ["http://192.168.12.1:8080/time.php?u"],
+        "http://sushkovs.com/time.php?json",
     "remote":
-        ["http://bytza.com/time.php?u"]
+        "http://worldtimeapi.org/api/timezone/Europe/Moscow"
 }

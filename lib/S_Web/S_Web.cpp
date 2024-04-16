@@ -45,6 +45,7 @@ void webServerSetup()
 //-------------------------------------------
 {
   // void S_Web::setup()
+  Serial.println("WebServerSetup begin");
   server.on("/", test);
   server.on("/settings", webSettings);
   server.on("/reset", webReset);
@@ -53,8 +54,8 @@ void webServerSetup()
   server.on("/style.css", webStyle);
   server.on("/update", webUpdate);
   server.on("/upload", HTTP_POST, replyOK, handleFileUpload);
-
   server.begin();
+  Serial.println("Web server started");
 } // end webServerStart function
 
 void webServerLoop()

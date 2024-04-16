@@ -11,6 +11,7 @@ class S_FS
     String readFile(const char *path);
     void writeFile(const char *path, const char *message);
     static String fileContent(const char *path);
+    static bool exists(const char *path);
 
     // String listDir();
 };

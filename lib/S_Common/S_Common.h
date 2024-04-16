@@ -1,10 +1,11 @@
 #include <Arduino.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
+//#include <WiFiClientSecure.h> // HTTPS library 
 #include "S_Settings.h"
 #include "TimeLib.h"
 #include <Arduino_JSON.h>
-
+#include <time.h>
 
 #ifndef _S_Common_
 #define _S_Common_

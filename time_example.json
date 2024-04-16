@@ -1,0 +1,17 @@
+{
+    "abbreviation":"MSK",
+    "client_ip":"46.188.82.8",
+    "datetime":"2024-04-16T11:59:50.079129+03:00",
+    "day_of_week":2,
+    "day_of_year":107,
+    "dst":false,
+    "dst_from":null,
+    "dst_offset":0,
+    "dst_until":null,
+    "raw_offset":10800,
+    "timezone":"Europe/Moscow",
+    "unixtime":1713257990,
+    "utc_datetime":"2024-04-16T08:59:50.079129+00:00",
+    "utc_offset":"+03:00",
+    "week_number":16
+}
