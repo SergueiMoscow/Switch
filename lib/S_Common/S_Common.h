@@ -32,6 +32,7 @@ namespace S_Common
         static bool checkTime(String url);
         static String getTime(String type);
         static String getTime();
+        static String generate_uuid_v4();
     };
 }
 #endif

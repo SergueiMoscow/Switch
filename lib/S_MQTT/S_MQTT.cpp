@@ -172,10 +172,17 @@ void S_MQTT::publish(bool force)
 {
     String publishTopic = rootTopic + "state";
     JSONVar devicesValues = devices->getForPublish();
-    devicesValues["time"] = S_Common::S_Common::getTime();
+    devicesValues["time"] = S_Common::S_Common::getUTime();
+    devicesValues["order"] = (hour() * 60 * 60) + (minute() * 60) + second();
+    devicesValues["id"] = rootTopic;
+    devicesValues["pageId"] = (String)year() + String(month()) + String(day());
     Serial.println("Mqtt.publish: " + publishTopic + JSON.stringify(devicesValues));
 
     mqttClient->publish((publishTopic).c_str(), JSON.stringify(devicesValues).c_str(), true);
+    // String test_topic = "MyHouse1/Bedroom/Light/tes";
+    // String test_topic2 = test_topic + "t";
+    // mqttClient->publish(((String)test_topic2).c_str(), ((String)millis()).c_str(), true);
+    // Serial.println("Mqtt.publish: test" + (String)millis());
     JSONVar keys = devicesValues.keys();
     for (int i = 0; i < keys.length(); i++) {
         String topic = rootTopic + clearValue(keys[i]);

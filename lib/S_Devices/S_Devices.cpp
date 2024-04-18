@@ -32,7 +32,7 @@ String S_Devices::clearValue(JSONVar value)
 
 void S_Devices::initRelay(JSONVar device)
 {
-    bool debug = true;
+    bool debug = false;
     relays[num_relays][RELAY_PIN] = getPin(device["pin"]);
     if (debug) Serial.println("initRelay " + (String)num_relays + " pin " + (String)relays[num_relays][RELAY_PIN]);
     String low = "LOW";
@@ -74,7 +74,7 @@ int S_Devices::getPin(JSONVar pin)
 
 void S_Devices::changeRelay(int relay, String value, String caller)
 {
-    bool debug = true;
+    bool debug = false;
   digitalWrite(relays[relay][RELAY_PIN], (value.equals("on") ? relays[relay][RELAY_ON] : relays[relay][RELAY_OFF]));
   if (debug) Serial.println("Set " + (String)relays[relay][RELAY_PIN] + " to " + (String)digitalRead(relays[relay][RELAY_PIN]));
   
@@ -102,7 +102,7 @@ JSONVar S_Devices::getForPublish()
 
 int S_Devices::getRelayByPin(int pin)
 {
-    bool debug = false;
+    bool debug = true;
     if (debug) Serial.println("getRelayByPin " + (String)pin);
     if (debug) Serial.println("numRelays " + (String)num_relays);
     for (int i = 0; i < num_relays; i++) {
@@ -119,12 +119,12 @@ int S_Devices::getRelayByPin(int pin)
 
 void S_Devices::callback(String topic, String value)
 {
-    bool debug = true;
-    int lastSlash = topic.lastIndexOf("/");
-    String name = topic.substring(lastSlash + 1);
+    bool debug = false;
+    String name = getDeviceNameFromTopic(topic);
     Serial.println("Devices callback: " + name);
     JSONVar device = getDeviceByName(name);
     int pin = getPin(device["pin"]);
+    Serial.print("Pin (getPin): " + (String)pin);
     int relay = getRelayByPin(pin);
     value.toUpperCase();
     if (debug) Serial.println("Device callback value received: " + value);
@@ -147,6 +147,25 @@ void S_Devices::callback(String topic, String value)
         relay_turned_on[relay] = millis();
         setTimeToTurnOff(relay, value.toInt(), &device);
     }
+}
+
+
+String S_Devices::getDeviceNameFromTopic(String topic) {
+  int lastSlashIndex = topic.lastIndexOf('/');
+  int secondLastSlashIndex = -1;
+  for(int i = lastSlashIndex - 1; i >= 0; i--) {
+    if(topic[i] == '/') {
+      secondLastSlashIndex = i;
+      break;
+    }
+  }
+  
+  if(secondLastSlashIndex == -1) {
+    // нет второго слеша
+    return "";
+  }
+
+  return topic.substring(secondLastSlashIndex + 1, lastSlashIndex);
 }
 
 void S_Devices::setTimeToTurnOff(int relay, unsigned long sec, JSONVar device)
@@ -183,7 +202,8 @@ JSONVar S_Devices::getDeviceByName(String relayName)
         String name = clearValue(config[keys[i]]["name"]);
         if (debug) Serial.println("getDeviceByName " + relayName);
         if (name == relayName) {
-            if (debug) Serial.println("Found");
+            if (debug) Serial.print("Found ");
+            if (debug) Serial.println(config[keys[i]]);
             return config[keys[i]];
         }
         if (debug) Serial.println("Not found");

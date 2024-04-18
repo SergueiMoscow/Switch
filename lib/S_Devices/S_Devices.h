@@ -28,7 +28,9 @@ class S_Devices
         int getPinByName(String name);
         void setMillisToTurnOff(int relay, int sec = 0);
         JSONVar getDeviceByName(String relayName);
+        String getDeviceNameFromTopic(String topic);
         void setTimeToTurnOff(int relay, unsigned long sec, JSONVar device);
+
     public:
         void init();
         void changeRelay(int relay, String value, String caller);
