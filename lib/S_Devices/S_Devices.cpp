@@ -32,7 +32,7 @@ String S_Devices::clearValue(JSONVar value)
 
 void S_Devices::initRelay(JSONVar device)
 {
-    bool debug = false;
+    bool debug = true;
     relays[num_relays][RELAY_PIN] = getPin(device["pin"]);
     if (debug) Serial.println("initRelay " + (String)num_relays + " pin " + (String)relays[num_relays][RELAY_PIN]);
     String low = "LOW";
@@ -43,6 +43,9 @@ void S_Devices::initRelay(JSONVar device)
     if (debug) Serial.println("OFF "  + (String)relays[num_relays][RELAY_OFF]);
     if (debug) Serial.println("LOW "  + (String)LOW);
     if (debug) Serial.println("HIGH "  + (String)HIGH);
+    if (debug) Serial.print("Max_on for relay " + (String)device["name"]);
+    if (debug) Serial.println(device["max_on"]);
+    relays[num_relays][RELAY_MAX_SECONDS_ON] = device["max_on"];
     pinMode(relays[num_relays][RELAY_PIN], OUTPUT);
     // digitalWrite(relays[num_relays][RELAY_PIN], relays[num_relays][RELAY_OFF]);
     changeRelay(num_relays, "off", "init");
@@ -80,7 +83,7 @@ void S_Devices::changeRelay(int relay, String value, String caller)
   
 }
 
-JSONVar S_Devices::getForPublish()
+JSONVar S_Devices::getJsonRelayValuesForPublish()
 {
     bool debug = false;
     JSONVar keys = config.keys();
@@ -133,6 +136,7 @@ void S_Devices::callback(String topic, String value)
         // digitalWrite(relays[relay][RELAY_PIN], relays[relay][RELAY_ON]);
         changeRelay(relay, "on", "callback");
         relay_turned_on[relay] = millis();
+        setTimeToTurnOff(relay, 0, &device);
     }
     if (value.equals("OFF")) {
         Serial.println("OFF: Pin: " + (String)relays[relay][RELAY_PIN] + " value " + relays[relay][RELAY_OFF]);
@@ -151,32 +155,41 @@ void S_Devices::callback(String topic, String value)
 
 
 String S_Devices::getDeviceNameFromTopic(String topic) {
-  int lastSlashIndex = topic.lastIndexOf('/');
-  int secondLastSlashIndex = -1;
-  for(int i = lastSlashIndex - 1; i >= 0; i--) {
-    if(topic[i] == '/') {
-      secondLastSlashIndex = i;
-      break;
-    }
-  }
+  // Возвращает последний элемент топика:
+  // Home/Room/Device/set/relay_name - возвращает relay_name.
+  // Конфигурится в devices.json $.<device>.relay_name
+  int lastSlash = topic.lastIndexOf("/");
+  String name = topic.substring(lastSlash + 1);
+  return name;
+  //  Эта часть кода возвращала предпоследний элемент из строки:
+  //  Home/Room/<name>/set
+//   int lastSlashIndex = topic.lastIndexOf('/');
+//   int secondLastSlashIndex = -1;
+//   for(int i = lastSlashIndex - 1; i >= 0; i--) {
+//     if(topic[i] == '/') {
+//       secondLastSlashIndex = i;
+//       break;
+//     }
+//   }
   
-  if(secondLastSlashIndex == -1) {
-    // нет второго слеша
-    return "";
-  }
+//   if(secondLastSlashIndex == -1) {
+//     // нет второго слеша
+//     return "";
+//   }
 
-  return topic.substring(secondLastSlashIndex + 1, lastSlashIndex);
+//   return topic.substring(secondLastSlashIndex + 1, lastSlashIndex);
 }
 
 void S_Devices::setTimeToTurnOff(int relay, unsigned long sec, JSONVar device)
 {
     bool debug = true;
     unsigned long currentTime = S_Common::S_Common::getUTime();
+    unsigned long defaultMaxSec = relays[relay][RELAY_MAX_SECONDS_ON];
     if (sec == 0) {
-        unsigned long defaultMaxSec = strtoul(clearValue(device["max_on"]).c_str(), 0, 10);
+        if (debug) Serial.print("setTimeToTurnOff defaultMaxSec = " + (String)defaultMaxSec);
         relay_turn_off[relay] = currentTime + defaultMaxSec;
     } else {
-        relay_turn_off[relay] = currentTime + sec;
+        relay_turn_off[relay] = currentTime + min(sec, defaultMaxSec);
     }
     if (debug) Serial.println("SetTimeToTurnOff: Turn off at " + (String)relay_turn_off[relay] + " now " + (String)(now()));
 
@@ -211,19 +224,19 @@ JSONVar S_Devices::getDeviceByName(String relayName)
     return {};
 }
 
-void S_Devices::loop()
+int S_Devices::loop()
+// Возвращает количество изменённых значений реле (выключений)
 {
-    /// TODO: check relay_turn_off array
     bool debug = true;
     unsigned long currentTime = S_Common::S_Common::getUTime();
+    int result = 0;
     for (int relay = 0; relay < num_relays; relay++) {
         if (relay_turn_off[relay] != 0 && relay_turn_off[relay] <= currentTime) {
             changeRelay(relay, "off", "loop timer");
             if (debug) Serial.println("Turning off by timer relay " + (String)relay);
             relay_turn_off[relay] = 0;
+            result ++;
         }
     }
-    
-    // Serial.println("Devices loop Unsigned long max");
-    // Serial.println(0UL - 1UL);
+    return result;
 }

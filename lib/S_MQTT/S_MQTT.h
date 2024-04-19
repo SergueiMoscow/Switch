@@ -9,6 +9,9 @@
 #define MQTT_SETTINGS_FILE "/mqtt.json"
 #define GLOBAL_SETTINGS_FILE "/global.json"
 #define SUBSCRIBE_POSTFIX "set"
+// Использование:
+// Home/Room/Device/set/RelayName
+// RelayName - из devices.json $.<device>.name: "RelayName"
 
 class S_MQTT
 {

@@ -171,18 +171,15 @@ void S_MQTT::setRootTopic()
 void S_MQTT::publish(bool force)
 {
     String publishTopic = rootTopic + "state";
-    JSONVar devicesValues = devices->getForPublish();
+    JSONVar devicesValues = devices->getJsonRelayValuesForPublish();
     devicesValues["time"] = S_Common::S_Common::getUTime();
-    devicesValues["order"] = (hour() * 60 * 60) + (minute() * 60) + second();
-    devicesValues["id"] = rootTopic;
-    devicesValues["pageId"] = (String)year() + String(month()) + String(day());
+    // for IoT нужно ли???
+    // devicesValues["order"] = (hour() * 60 * 60) + (minute() * 60) + second();
+    // devicesValues["id"] = rootTopic;
+    // devicesValues["pageId"] = (String)year() + String(month()) + String(day());
     Serial.println("Mqtt.publish: " + publishTopic + JSON.stringify(devicesValues));
 
     mqttClient->publish((publishTopic).c_str(), JSON.stringify(devicesValues).c_str(), true);
-    // String test_topic = "MyHouse1/Bedroom/Light/tes";
-    // String test_topic2 = test_topic + "t";
-    // mqttClient->publish(((String)test_topic2).c_str(), ((String)millis()).c_str(), true);
-    // Serial.println("Mqtt.publish: test" + (String)millis());
     JSONVar keys = devicesValues.keys();
     for (int i = 0; i < keys.length(); i++) {
         String topic = rootTopic + clearValue(keys[i]);
@@ -212,5 +209,7 @@ void S_MQTT::loop()
         }
     }
     mqttClient->loop();
-    devices->loop();
+    if (devices->loop() > 0) {
+        publish(false);
+    }
 }

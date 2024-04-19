@@ -5,18 +5,22 @@
 #include "S_Settings.h"
 #include "S_Common.h"
 
+// для массива relays:
 #define RELAY_PIN 0
-#define RELAY_ON 1
+// значения LOW / HIGH
+#define RELAY_ON 1  
 #define RELAY_OFF 2
-#define RELAY_DEFAULT_ON
-#define RELAY_DEFAULT_OFF 1
+// Максимально сек может быть включенным Default
+#define RELAY_MAX_SECONDS_ON 3
+#define RELAY_DEFAULT_MAX_SECONDS_ON
+
 #define MAX_RELAYS 4
 
 class S_Devices
 {
     private:
         int num_relays;
-        int relays[MAX_RELAYS][3];
+        int relays[MAX_RELAYS][4];
         unsigned long relay_turned_on[MAX_RELAYS];
         unsigned long relay_turn_off[MAX_RELAYS];
         JSONVar config;
@@ -35,7 +39,7 @@ class S_Devices
         void init();
         void changeRelay(int relay, String value, String caller);
         S_Devices();
-        JSONVar getForPublish();
+        JSONVar getJsonRelayValuesForPublish();
         void callback(String topic, String value);
-        void loop();
+        int loop();
 };
