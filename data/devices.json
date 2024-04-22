@@ -5,6 +5,7 @@
         "name": "Light",
         "description": "Свет",
         "on": "LOW",
+        "max_on": 20,
         "automation1": {
             "type": "time",
             "timeon": "22:00",

@@ -1,4 +1,5 @@
 #include "S_OTA.h"
+#include <iostream>
 
   void S_OTA::loadConfig()
   {
@@ -14,13 +15,15 @@
   void S_OTA::autoUpdate()
   {
     Serial.println("Begin autoupdate");
-    String add_parameter = "&log=var:";
+    // TODO: Не нужен ???
+    String add_parameter = "";
     JSONVar otaSettings = JSON.parse(S_FS::fileContent("ota.json"));
     String serverVersion = getServerVersion(add_parameter);
     String buildVersion = getBuildVersion();
     String update_url = S_Settings::delQuotes(otaSettings["url_update"]);
     WiFiClient wifiClient;
     Serial.println("Server " + serverVersion +" local: " + buildVersion);
+    // Если разница между версиями более 10 минут, то грузим
     if (serverVersion > buildVersion)
     {
       Serial.print("AutoUpdate Server version:");
@@ -28,11 +31,10 @@
       Serial.print("AutoUpdate Build version:");
       Serial.println(buildVersion);
       Serial.println(update_url);
-      String url_new_version = update_url; // + "?module=" + module_type;
-      url_new_version.replace("update.php", module_type + "/" + serverVersion + ".bin");
-      String s = S_Settings::delQuotes(otaSettings["url_log"]);
-      s += "&log=";
-      s += String(S_Common::S_Common::getUTime() - lastCheckUpdate);
+      String url_new_version = update_url + "/get_bin/" + S_Settings::delQuotes(otaSettings["type"]);
+      // String s = S_Settings::delQuotes(otaSettings["url_log"]);
+      // s += "&log=";
+      // s += String(S_Common::S_Common::getUTime() - lastCheckUpdate);
 // #ifdef ESP8266
       Serial.println("Executing update: " + url_new_version);
 
@@ -65,32 +67,34 @@
   {
     WiFiClient wifiClient;
     HTTPClient http;
-    String url_string = S_Settings::delQuotes(otaSettings["url_update"]) + "?info=true&module=" + module_type;
+    JSONVar otaSettings = JSON.parse(S_FS::fileContent("ota.json"));
+    // String url_string = S_Settings::delQuotes(otaSettings["url_update"]) + "?info=true&module=" + module_type;
+    String url_string = S_Settings::delQuotes(otaSettings["url_update"]) + "/get_info/" + S_Settings::delQuotes(otaSettings["type"]);
     url_string += get_parameter;
     http.begin(wifiClient, url_string);
     Serial.println("GetServerVersion from " + url_string);
-    String playload = "0";
     int httpCode = http.GET();
     if (httpCode > 0) {
-      // HTTP header has been send and Server response header has been handled
-      //USE_SERIAL.printf("[HTTP] GET... code: %d\n", httpCode);
       // file found at server
       if (httpCode == HTTP_CODE_OK) {
-        playload = http.getString();
+        String playload = http.getString();
+        JSONVar response = JSON.parse(playload); 
+        String version = response["version"];
+        http.end();
+        return version;
       } // httpCode ok
       else
       {
-        playload = "0";
         Serial.println("HTTP ERROR: " + (String)httpCode);
       }
     }
     http.end();
-    return playload;
+    return "0";
   }
 
 String S_OTA::getBuildVersion()
 {
-  String build_version = String(BUILD_YEAR);
+  String build_version = String(BUILD_YEAR - 2000);
   if (BUILD_MONTH < 10) build_version += "0";
   build_version += String(BUILD_MONTH);
   if (BUILD_DAY < 10) build_version += "0";

@@ -165,7 +165,6 @@ void webFSBrowser()
     Serial.println("File: " + server.arg("filename"));
     Serial.println("Upload: " + server.arg("upload"));
   }
-  Serial.println("Test filename" + server.arg("filename"));
   if (server.hasArg("NewFile"))
   {
     String page_content = "";

@@ -1,7 +1,7 @@
 {
     "type": "Switch",
-    "url_update": "http://46.188.82.8/controllers/update.php",
-    "port": 80,
+    "url_update": "http://ota.sushkovs.ru",
+    "port": 8079,
     "period": 86400,
     "url_log": "http://46.188.82.8/controllers/log.php"
 }
