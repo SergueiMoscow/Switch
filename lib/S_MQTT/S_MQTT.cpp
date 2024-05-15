@@ -201,6 +201,7 @@ void S_MQTT::loop()
             connect();
         }
         S_Common::S_Common::getUTime();
+        Serial.print("S_MQTT.cpp loop ");
         Serial.println(S_Common::S_Common::getTime());
         if (mqttClient->connected())
         {

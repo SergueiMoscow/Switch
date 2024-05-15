@@ -1,7 +1,7 @@
 #include "S_DS.h"
 
 S_DS::S_DS(){
-  ds=OneWire(D4);
+  ds=OneWire(D0);
   kol_DS=Find_DS18b20();
 	return;
 };

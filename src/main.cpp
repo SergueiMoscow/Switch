@@ -14,7 +14,7 @@
 #include "S_OTA.h"
 
 S_Settings commonSettings;
-#define SETTINGS_FILE "/settings.json"
+// #define SETTINGS_FILE "/settings.json"
 
 S_WiFi sWiFi;
 S_MQTT sMQTT;
@@ -30,7 +30,7 @@ void setup()
   Serial.begin(57200);
   Serial.println("Begin setup");
   LittleFS.begin();
-  commonSettings.setSettingsFile(SETTINGS_FILE);
+  // commonSettings.setSettingsFile(SETTINGS_FILE);
   Serial.println("main.cpp. Trying to setup wifi");
   sWiFi.connect();
   Serial.println("main.cpp. Wifi connected, trying to setup web server");
@@ -47,5 +47,5 @@ void loop()
   sWiFi.WiFiLoop();
   sMQTT.loop();
   S_OTA::loop();
-  delay(300);
+  delay(500);
 }

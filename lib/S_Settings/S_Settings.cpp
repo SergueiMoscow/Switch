@@ -51,10 +51,6 @@ String S_Settings::getSetting(String key, String def_value)
   if (this->settings[key] == null)
     return def_value;
   setting.replace("\"", "");
-  //  Serial.print("GetSetting replacement:");
-  //  Serial.print(key);
-  //  Serial.print("->");
-  //  Serial.println(setting);
   return setting;
 }
 

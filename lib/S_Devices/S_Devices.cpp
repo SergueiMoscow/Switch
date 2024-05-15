@@ -59,12 +59,13 @@ int S_Devices::getPin(JSONVar pin)
         if (spin == "D0") return D0;
         if (spin == "D1") return D1;
         if (spin == "D2") return D2;
-        if (spin == "D3") return D3;
+        if (spin == "D3") return D3; // 5
+        if (spin == "D4") return D4; // 4
         if (spin == "D5") return D5;
         if (spin == "D6") return D6;
         if (spin == "D7") return D7;
-        if (spin == "D8") return D8;
-        if (spin == "D9") return D9;
+        if (spin == "D8") return D8; // 0
+        if (spin == "D9") return D9; // 2
         if (spin == "D10") return D10;
         if (spin == "D11") return D11;
         if (spin == "D12") return D12;
@@ -109,7 +110,7 @@ int S_Devices::getRelayByPin(int pin)
     if (debug) Serial.println("getRelayByPin " + (String)pin);
     if (debug) Serial.println("numRelays " + (String)num_relays);
     for (int i = 0; i < num_relays; i++) {
-        if (debug) Serial.println("Checking " + (String)i + " pin " + (String)relays[i][RELAY_PIN]);
+        if (debug) Serial.println("Devices::getRelayByPin Checking " + (String)i + " pin " + (String)relays[i][RELAY_PIN]);
         if (relays[i][RELAY_PIN] == pin) {
             if (debug) Serial.println("Searching " + (String)relays[i][RELAY_PIN]);
             if (debug) Serial.println("Found " + (String)i);

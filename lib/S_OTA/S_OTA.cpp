@@ -55,7 +55,13 @@
 
       case HTTP_UPDATE_NO_UPDATES: Serial.println("HTTP_UPDATE_NO_UPDATES"); break;
 
-      case HTTP_UPDATE_OK: Serial.println("HTTP_UPDATE_OK"); break;
+      case HTTP_UPDATE_OK: Serial.println("HTTP_UPDATE_OK"); {
+        // Если сохранять версию в файле
+        // File file = LittleFS.open("version", "w");
+        // file.print(serverVersion);
+        // file.close();
+        break;
+      }
     }
     }
     lastCheckUpdate = S_Common::S_Common::getUTime();
@@ -94,6 +100,8 @@
 
 String S_OTA::getBuildVersion()
 {
+  String file_build_version = S_FS::fileContent("version");
+  // Версия, сформированная при компиляции
   String build_version = String(BUILD_YEAR - 2000);
   if (BUILD_MONTH < 10) build_version += "0";
   build_version += String(BUILD_MONTH);
@@ -102,6 +110,11 @@ String S_OTA::getBuildVersion()
   build_version += "_";
   if (BUILD_HOUR < 10) build_version += "0";
   build_version += String(BUILD_HOUR);
+  if (file_build_version != build_version) {
+      File file = LittleFS.open("version", "w");
+      file.print(build_version);
+      file.close();
+  }
   return build_version;
 }
 
