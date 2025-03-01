@@ -124,13 +124,13 @@ void webSettings()
   }
   // web page
   //output += fs.readFile("header.htm");
-  output += S_FS::fileContent("header.htm");
+  output += S_FS::readFile("header.htm");
   Serial.println(output);
   output += webMenu("/settings");
 //  output += settings.stringReplace(fs.readFile("settings.htm"));
-  output += settings.stringReplace(S_FS::fileContent("settings.htm"));
+  output += settings.stringReplace(S_FS::readFile("settings.htm"));
   //output += fs.readFile("footer.htm");
-  output += S_FS::fileContent("footer.htm");
+  output += S_FS::readFile("footer.htm");
   // String output2 = settings.stringReplace(output);
   server.send(200, "text/html", output);
 }
@@ -312,13 +312,13 @@ void webWifi()
   }
   // web page
   //output += fs.readFile("header.htm");
-  output += S_FS::fileContent("header.htm");
+  output += S_FS::readFile("header.htm");
   Serial.println(output);
   output += webMenu("/wifi");
   //output += settings.stringReplace(fs.readFile("wifi.htm"));
-  output += settings.stringReplace(S_FS::fileContent("wifi.htm"));
+  output += settings.stringReplace(S_FS::readFile("wifi.htm"));
   //output += fs.readFile("footer.htm");
-  output += S_FS::fileContent("footer.htm");
+  output += S_FS::readFile("footer.htm");
   // String output2 = settings.stringReplace(output);
   server.send(200, "text/html", output);
 }
@@ -328,7 +328,7 @@ void webStyle()
 //-------------------------------------------
 {
   //S_FS fs = S_FS();
-  String output = S_FS::fileContent("style.css");
+  String output = S_FS::readFile("style.css");
   server.send(200, "text/plain", output);
 }
 
@@ -346,7 +346,7 @@ void webStyle()
 //       return;
 //     }
 //   }
-//   String output = fileContent("/index.htm");
+//   String output = readFile("/index.htm");
 //   server.send(200, "text/html", output);
 // }
 
@@ -359,8 +359,8 @@ void webUpdate() {
 
   Serial.println("WebUpdate");
   static bool varAutoUpdate = false;
-  String html = S_FS::fileContent("header.htm");
-  JSONVar otaSettings = JSON.parse(S_FS::fileContent("ota.json"));
+  String html = S_FS::readFile("header.htm");
+  JSONVar otaSettings = JSON.parse(S_FS::readFile("ota.json"));
   String module_type = S_Settings::delQuotes(otaSettings["type"]);
   String url_update = S_Settings::delQuotes(otaSettings["url_update"]);
   String version = S_OTA::getBuildVersion();

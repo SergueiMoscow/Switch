@@ -6,6 +6,8 @@
 // #include <ArduinoJson.h>
 #include <S_DS.h>
 #include "S_FS.h"
+#include "S_Mode.h"
+
   class S_Settings
   {
   private:

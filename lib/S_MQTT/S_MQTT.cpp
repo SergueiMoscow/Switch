@@ -16,6 +16,7 @@ void S_MQTT::init(PubSubClient* client, S_Devices* devicesPtr)
 {
     mqttClient = client;
     devices = devicesPtr;
+    Serial.println("S_MQTT.cpp loadConfig from init");
     loadConfig();
 }
 
@@ -24,6 +25,10 @@ void S_MQTT::loadConfig()
     S_FS fs = S_FS();
     bool found = false;
     Serial.println("S_MQTT.cpp reading mqtt settings");
+    if (!S_FS::exists(MQTT_SETTINGS_FILE)) {
+        S_Mode::setConfigMQTTMode("No MQTT settings found");
+        return;
+    }
     JSONVar mqttJson = JSON.parse(fs.readFile(MQTT_SETTINGS_FILE));
     if (JSON.stringify(mqttJson).length() < 10)
         return;
@@ -48,6 +53,7 @@ void S_MQTT::loadConfig()
         setServer();
         setRootTopic();
         connect();
+        Serial.println("MQTT settings loaded");
     }
     else
     {
@@ -59,6 +65,7 @@ void callback(char *topic, byte *msg, unsigned int len)
 {
     extern S_Devices devices;
     extern S_MQTT sMQTT;
+    Serial.println("Callback: " + (String)topic + ": ");
     String message;
     for (int i = 0; i < len; i++)
     {
@@ -77,7 +84,7 @@ void S_MQTT::setServer()
     if (server == "")
     {
         Serial.println("MQTT Server is not configured");
-        loadConfig();
+        // loadConfig();
         return;
     }
     int port = atoi(clearValue(mqttSettings["Port"]).c_str());
@@ -85,21 +92,33 @@ void S_MQTT::setServer()
     Serial.print(server);
     Serial.println("\" port: " + (String)port);
     mqttClient->setServer(server, port);
+    mqttClient->setKeepAlive(60); // Установить keep-alive 60 секунд
     mqttClient->setCallback(callback);
 }
 
 void S_MQTT::connect()
 {
+    bool debug = true;
+    Serial.println("S_MQTT.cpp connect 1");
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi not connected, skipping MQTT connect");
+        return;
+    }
+    Serial.println("S_MQTT.cpp connect 2");
     JSONVar jUser, jPass;
     jUser = mqttSettings["User"];
     jPass = mqttSettings["Password"];
+    Serial.println("S_MQTT.cpp connect 3");
     if (jUser == null || jPass == null)
     {
         Serial.println("User or password is not configured");
         Serial.println(JSON.stringify(mqttSettings));
+        Serial.println("S_MQTT.cpp loadConfig from connect");
+        Serial.println("S_MQTT.cpp connect 4");
         loadConfig();
         return;
     }
+    Serial.println("S_MQTT.cpp connect 5");
     String clientId = WiFi.macAddress().c_str();
     String user = clearValue(mqttSettings["User"], "user").c_str();
     String password = clearValue(mqttSettings["Password"], "pass").c_str();
@@ -119,13 +138,14 @@ void S_MQTT::connect()
             Serial.println("Connected to MQTT ");
             publish(false);
             String subscribeString = getSubscribeString();
-            Serial.print("Subscribe to: " + subscribeString);
+            Serial.println("Subscribe to: " + subscribeString);
             mqttClient->subscribe(subscribeString.c_str());
             isConfigured = true;
         }
         else
         {
-            Serial.println("Couldn't connect to MQTT");
+            Serial.print("Failed to connect to MQTT, state: ");
+            Serial.println(mqttClient->state());
         }
         lastTryConnect = millis();
     }
@@ -192,12 +212,19 @@ void S_MQTT::publish(bool force)
 void S_MQTT::loop()
 {
     unsigned long curMillis = millis();
-    if (max(curMillis, lastPublished) - min(curMillis, lastPublished) > periodSec * 1000)
+    // Serial.print("S_MQTT.cpp loop condition: curMillis: " + curMillis);
+    // Serial.print(" lastPubliched: " + lastPublished);
+    // Serial.print(" PeriodSec " + periodSec);
+    // bool result = max(curMillis, lastPublished) - min(curMillis, lastPublished) >= periodSec * 1000UL;
+    // Serial.print(" Result: " + result);
+
+    if (max(curMillis, lastPublished) - min(curMillis, lastPublished) >= periodSec * 1000UL)
     {
         if (isConfigured && !mqttClient->connected())
         {
             Serial.println("MQTT not connected");
-            loadConfig();
+            Serial.println("S_MQTT.cpp connect from loop");
+            // loadConfig();
             connect();
         }
         S_Common::S_Common::getUTime();

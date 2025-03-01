@@ -14,9 +14,9 @@ namespace S_Common
         if (remote != "")
         {
             Serial.println("Common: Remote time server: " + remote);
-            if (!checkTime(remote)) {
+            if (!checkTime(remote, true)) {
                 Serial.println("Common: Can't set time from " + remote);
-                if (!checkTime(local)) {
+                if (!checkTime(local, true)) {
                     Serial.println("Common: Can't set time from " + local);
                 }
             }
@@ -71,33 +71,40 @@ namespace S_Common
         // возвращает содержание страницы (для time.php, например)
         WiFiClient espClient;
         HTTPClient http;
-        http.begin(espClient, url);
-        String playload = "0";
-        Serial.print("GetUrl: " + url + " :");
-        int httpCode = http.GET();
-        Serial.println(httpCode);
+        // espClient.setInsecure();
+        // http.useHTTP10(true);
 
-        if (httpCode > 0)
+        if (!http.begin(espClient, url)) {
+            Serial.println("HTTPClient: Не удалось инициализировать соединение");
+            return "0";
+        };
+        String host = extractHost(url);
+        http.addHeader("Host", host);
+        http.addHeader("User-Agent", "X-Device");
+        Serial.print("added header: Host: " + host + " User-Agent: X-Device");
+
+        String playload = "0";
+        Serial.print("GetUrl: " + url + " (header: Host " + host + "): " );
+        int httpCode = http.GET();
+        Serial.println("Httpcode: " + httpCode);
+
+        Serial.printf("Response code: %u\n",httpCode);
+        Serial.printf("Content length: %u\n",http.getSize());
+        // HTTP header has been send and Server response header has been handled
+        // USE_SERIAL.printf("[HTTP] GET... code: %d\n", httpCode);
+        // file found at server
+        if (httpCode == HTTP_CODE_OK)
         {
-            // HTTP header has been send and Server response header has been handled
-            // USE_SERIAL.printf("[HTTP] GET... code: %d\n", httpCode);
-            // file found at server
-            if (httpCode == HTTP_CODE_OK)
-            {
-                playload = http.getString();
-                Serial.print("S_Common: playload:");
-                Serial.println(playload);
-            } // httpCode ok
-            else
-            {
-                playload = "0";
-            }
-        }
+            playload = http.getString();
+            Serial.print("S_Common: playload:");
+            Serial.println(playload);
+        } // httpCode ok
+
         http.end();
         return playload;
     }
 
-    bool S_Common::checkTime(String url)
+    bool S_Common::checkTime(String url, bool force = false)
     {
         bool debug = false;
         static unsigned long msCheck = 0;
@@ -108,7 +115,7 @@ namespace S_Common
         String timeStamp;
         JSONVar jsonDate;
 
-        if ((curMillis > msCheck ? curMillis - msCheck : msCheck - curMillis) > MILLIS_CHECK_TIME || msCheck == 0)
+        if ((curMillis > msCheck ? curMillis - msCheck : msCheck - curMillis) > MILLIS_CHECK_TIME || msCheck == 0 || force)
         {
             bool debug = false;
             strJsonDate = getURL(url);
@@ -137,4 +144,35 @@ namespace S_Common
         str.replace("\"", "");
         return str;
     }
+
+
+    String S_Common::extractHost(const String& url) {
+        String host = "unknown";
+        
+        int scheme_end = url.indexOf("://");
+        int host_start;
+
+        if (scheme_end != -1) {
+            host_start = scheme_end + 3; // Пропустить "://"
+        } else {
+            host_start = 0; // Отсутствие схемы
+        }
+
+        int host_end = url.indexOf('/', host_start);
+        if (host_end == -1) {
+            host_end = url.length();
+        }
+
+        if (host_start < host_end) {
+            host = url.substring(host_start, host_end);
+            
+            int port_pos = host.indexOf(':');
+            if (port_pos != -1) {
+                host = host.substring(0, port_pos);
+            }
+        }
+
+        return host;
+    }
+
 }

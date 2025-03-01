@@ -1,16 +1,21 @@
-#include <Arduino.h>
-#include <FS.h>
-#include <LittleFS.h>
-#include <Arduino_JSON.h>
 #include "S_FS.h"
 
-struct FileInfo
+S_FS::S_FS()
 {
-    String name;
-    int size;
-    time_t created;
-    time_t updated;
-};
+    if (!LittleFS.begin())
+    {
+        Serial.println("Ошибка монтирования файловой системы");
+    }
+    else
+    {
+        Serial.println("Файловая система успешно смонтирована");
+    }
+}
+
+
+bool S_FS::begin() {
+    return LittleFS.begin();
+}
 
 int S_FS::countFiles(const char *dirname)
 {
@@ -21,95 +26,116 @@ int S_FS::countFiles(const char *dirname)
         count++;
     }
     return count;
-};
+}
 
-JSONVar S_FS::listDir(const char *dirname)
+String S_FS::listDir(const char *dirname)
 {
+    StaticJsonDocument<1024> doc; // Размер документа нужно подобрать в зависимости от ожидаемых данных
+    JsonObject root = doc.to<JsonObject>();
+
     Serial.printf("Listing directory: %s\n", dirname);
-    Dir root = LittleFS.openDir(dirname);
+    Dir dir = LittleFS.openDir(dirname);
     int count = 0;
-    String filesList = "{";
-    while (root.next())
+
+    while (dir.next())
     {
-        File file = root.openFile("r");
-        Serial.print("  FILE: ");
-        Serial.print(root.fileName());
-        Serial.print("  SIZE: ");
-        Serial.print(file.size());
-        time_t cr = file.getCreationTime();
-        time_t lw = file.getLastWrite();
-        filesList += "\"f" + (String)count + "\":{\"name\":\"" + root.fileName() + "\", \"size\":" + (String)(file.size()) + "}";
-        // filelist[count].name = root.fileName();
-        // filelist[count].size = file.size();
-        // filelist[count].created = file.getCreationTime();
-        // filelist[count].updated = file.getLastWrite();
+        File file = dir.openFile("r");
+        if (!file)
+        {
+            Serial.println("Не удалось открыть файл");
+            continue;
+        }
+
+        JsonObject fileObj = root.createNestedObject("f" + String(count));
+        fileObj["name"] = dir.fileName();
+        fileObj["size"] = file.size();
+        fileObj["created"] = file.getCreationTime();
+        fileObj["updated"] = file.getLastWrite();
+
         file.close();
-        struct tm *tmstruct = localtime(&cr);
-        Serial.printf("    CREATION: %d-%02d-%02d %02d:%02d:%02d\n", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
-        tmstruct = localtime(&lw);
-        Serial.printf("  LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
         count++;
     }
-    filesList += "}";
-    Serial.println(filesList);
-    Serial.println(count);
-    Serial.println(JSON.stringify(JSON.parse(filesList)));
-    return JSON.parse(filesList);
+
+    String output;
+    serializeJson(doc, output);
+    Serial.println(output);
+    return output;
 }
 
-// TODO: readFile и fileContent - идентичны. Один из ни static.
-// Переделать код и оставить один (static)
-String S_FS::readFile(const char *path) {
-  Serial.printf("Reading file: %s\n", path);
+String S_FS::readFile(const char *path)
+{
+//    Serial.printf("Reading file: %s\n", path);
 
-  File file = LittleFS.open(path, "r");
-  if (!file) {
-    Serial.println("Failed to open file for reading");
-    return "";
-  }
-  String result = "";
-  while (file.available()) {
-    result += file.readString();
-  }
-  file.close();
-  return result;
+    File file = LittleFS.open(path, "r");
+    if (!file)
+    {
+        Serial.println("Не удалось открыть файл для чтения");
+        return "";
+    }
+
+    String result;
+    while (file.available())
+    {
+        result += (char)file.read();
+    }
+    file.close();
+    return result;
 }
 
-bool S_FS::exists(const char *path) {
-  return LittleFS.exists(path);
+bool S_FS::exists(const char *path)
+{
+    return LittleFS.exists(path);
 }
 
-String S_FS::fileContent(const char *path) {
-  Serial.printf("Reading file: %s\n", path);
+bool S_FS::readJsonFile(const char *path, JsonDocument& doc)
+{
+    Serial.printf("Reading JSON file: %s\n", path);
 
-  File file = LittleFS.open(path, "r");
-  if (!file) {
-    Serial.println("Failed to open file for reading");
-    return "";
-  }
-  String result = "";
-  while (file.available()) {
-    result += file.readString();
-  }
-  file.close();
-  return result;
+    File file = LittleFS.open(path, "r");
+    if (!file)
+    {
+        Serial.printf("Не удалось открыть JSON файл: %s\n", path);
+        return false;
+    }
+
+    DeserializationError error = deserializeJson(doc, file);
+    if (error)
+    {
+        Serial.print(F("Ошибка парсинга JSON в файле "));
+        Serial.print(path);
+        Serial.print(F(": "));
+        Serial.println(error.f_str());
+        file.close();
+        return false;
+    }
+
+    file.close();
+    return true;
 }
 
+bool S_FS::writeFile(const char *path, const char *message)
+{
+    Serial.printf("Writing file: %s\n", path);
 
-void S_FS::writeFile(const char *path, const char *message) {
-  Serial.printf("Writing file: %s\n", path);
+    File file = LittleFS.open(path, "w");
+    if (!file)
+    {
+        Serial.println("Не удалось открыть файл для записи");
+        return false;
+    }
 
-  File file = LittleFS.open(path, "w");
-  if (!file) {
-    Serial.println("Failed to open file for writing");
-    return;
-  }
-  if (file.print(message)) {
-    Serial.println("File written");
-  } else {
-    Serial.println("Write failed");
-  }
-  delay(2000);  // Make sure the CREATE and LASTWRITE times are different
-  file.close();
+    if (file.print(message))
+    {
+        Serial.println("Файл успешно записан");
+        return true;
+    }
+    else
+    {
+        Serial.println("Не удалось записать данные в файл");
+        return false;
+    }
+
+    delay(2000); // Убедиться, что CREATE и LASTWRITE разные
+    file.close();
+    return true;
 }
-

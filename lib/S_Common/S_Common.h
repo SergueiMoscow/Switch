@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
-//#include <WiFiClientSecure.h> // HTTPS library 
+#include <WiFiClientSecure.h> // HTTPS library 
 #include "S_Settings.h"
 #include "TimeLib.h"
 #include <Arduino_JSON.h>
@@ -29,10 +29,11 @@ namespace S_Common
         static String getURL(String url);
         static void setUTime();
         static unsigned long getUTime();
-        static bool checkTime(String url);
+        static bool checkTime(String url, bool force);
         static String getTime(String type);
         static String getTime();
         static String generate_uuid_v4();
+        static String extractHost(const String& url);
     };
 }
 #endif

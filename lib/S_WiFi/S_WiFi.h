@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "S_Mode.h"
 
 class S_WiFi
 {

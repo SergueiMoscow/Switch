@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Arduino_JSON.h>
+#include "S_Mode.h"
 #include "S_FS.h"
 #include "S_DS.h"
 #include "S_Settings.h"

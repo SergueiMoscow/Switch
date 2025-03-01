@@ -25,7 +25,9 @@ void S_Settings::readSettings()
   }
   else
   {
-    Serial.println("Settings file does not exist");
+    S_Mode::setConfigMQTTMode("Settings file does not exist");
+    Serial.print("Settings file does not exist: ");
+    Serial.println(settingsFile);
     settings = null;
   }
   delete fs;

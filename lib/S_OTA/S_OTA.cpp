@@ -3,7 +3,12 @@
 
   void S_OTA::loadConfig()
   {
-    otaSettings = JSON.parse(S_FS::fileContent("ota.json"));
+    if (!S_FS::exists("ota.json"))
+    {
+      S_Mode::setConfigOTAMode("No ota.json found");
+      return;
+    }
+    otaSettings = JSON.parse(S_FS::readFile("ota.json"));
     checkPeriod = otaSettings["period"];
     module_type = S_Settings::delQuotes(otaSettings["type"]);
     Serial.print("Check updates every ");
@@ -17,7 +22,11 @@
     Serial.println("Begin autoupdate");
     // TODO: Не нужен ???
     String add_parameter = "";
-    JSONVar otaSettings = JSON.parse(S_FS::fileContent("ota.json"));
+    if (!S_FS::exists("ota.json")) {
+      S_Mode::setConfigOTAMode("No ota.json found (autoUpdate)");
+      return;
+    }
+    JSONVar otaSettings = JSON.parse(S_FS::readFile("ota.json"));
     String serverVersion = getServerVersion(add_parameter);
     String buildVersion = getBuildVersion();
     String update_url = S_Settings::delQuotes(otaSettings["url_update"]);
@@ -73,7 +82,7 @@
   {
     WiFiClient wifiClient;
     HTTPClient http;
-    JSONVar otaSettings = JSON.parse(S_FS::fileContent("ota.json"));
+    JSONVar otaSettings = JSON.parse(S_FS::readFile("ota.json"));
     // String url_string = S_Settings::delQuotes(otaSettings["url_update"]) + "?info=true&module=" + module_type;
     String url_string = S_Settings::delQuotes(otaSettings["url_update"]) + "/get_info/" + S_Settings::delQuotes(otaSettings["type"]);
     url_string += get_parameter;
@@ -100,7 +109,7 @@
 
 String S_OTA::getBuildVersion()
 {
-  String file_build_version = S_FS::fileContent("version");
+  String file_build_version = S_FS::readFile("version");
   // Версия, сформированная при компиляции
   String build_version = String(BUILD_YEAR - 2000);
   if (BUILD_MONTH < 10) build_version += "0";

@@ -8,7 +8,10 @@ S_Devices::S_Devices()
 void S_Devices::init()
 {
     S_FS fs = S_FS();
-    if (!fs.exists("/devices.json")) {return;}
+    if (!fs.exists("/devices.json")) {
+      S_Mode::setConfigMQTTMode("No devices.json found");
+      return;
+    }
     config = JSON.parse(fs.readFile("/devices.json"));
     Serial.println("Devices config:");
     Serial.println(JSON.stringify(config));
@@ -78,7 +81,7 @@ int S_Devices::getPin(JSONVar pin)
 
 void S_Devices::changeRelay(int relay, String value, String caller)
 {
-    bool debug = false;
+  bool debug = true;
   digitalWrite(relays[relay][RELAY_PIN], (value.equals("on") ? relays[relay][RELAY_ON] : relays[relay][RELAY_OFF]));
   if (debug) Serial.println("Set " + (String)relays[relay][RELAY_PIN] + " to " + (String)digitalRead(relays[relay][RELAY_PIN]));
   
@@ -123,7 +126,7 @@ int S_Devices::getRelayByPin(int pin)
 
 void S_Devices::callback(String topic, String value)
 {
-    bool debug = false;
+    bool debug = true;
     String name = getDeviceNameFromTopic(topic);
     Serial.println("Devices callback: " + name);
     JSONVar device = getDeviceByName(name);

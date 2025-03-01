@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include "S_WiFi.h"
 #include "S_FS.h"
@@ -134,40 +135,63 @@ void S_WiFi::connect()
 {
   bool isConnected = false;
   S_FS fs = S_FS();
-  JSONVar config;
-  config = JSON.parse(fs.readFile("/wifi.json"));
-  JSONVar keys = config.keys();
-  String ssid, pass;
-  for (int i = 0; i < keys.length(); i++)
-  {
-    ssid = JSON.stringify(keys[i]);
-    ssid.replace("\"", "");
-    Serial.println("Searching " + ssid);
-    if (isSSID(ssid))
-    {
-      Serial.println("Found " + ssid);
-      pass = JSON.stringify(config[keys[i]]);
-      pass.replace("\"", "");
+
+  // Определяем размер JSON-документа. Размер зависит от структуры вашего JSON-файла.
+  // Здесь 1024 байта используется как пример. При необходимости увеличьте размер.
+  StaticJsonDocument<1024> doc;
+
+  // Чтение JSON-файла
+  if (!fs.readJsonFile("/wifi.json", doc)) {
+    Serial.println("Не удалось прочитать /wifi.json");
+    myConnect();
+    return;
+  }
+
+  // Проверяем, является ли корневой элемент объектом
+  if (!doc.is<JsonObject>()) {
+    Serial.println("/wifi.json имеет неверный формат");
+    myConnect();
+    return;
+  }
+
+  JsonObject config = doc.as<JsonObject>();
+
+  // Перебираем все пары ключ-значение в JSON-объекте
+  for (JsonPair kv : config) {
+    const char* ssid = kv.key().c_str();
+    const char* pass = kv.value().as<const char*>();
+
+    Serial.print("Поиск SSID: ");
+    Serial.println(ssid);
+
+    if (isSSID(ssid)) {
+      Serial.print("Найден SSID: ");
+      Serial.println(ssid);
+
       WiFi.mode(WIFI_STA);
       mode = STA;
-      WiFi.begin(ssid.c_str(), pass.c_str());
-      int i = 0;
-      while (WiFi.status() != WL_CONNECTED && i < 50)
-      {
+      WiFi.begin(ssid, pass);
+
+      int attempt = 0;
+      while (WiFi.status() != WL_CONNECTED && attempt < 50) {
         delay(500);
         Serial.print(".");
-        i++;
+        attempt++;
       }
+
       isConnected = (WiFi.status() == WL_CONNECTED);
-      if (isConnected)
-      {
-        Serial.print("IP: ");
+      if (isConnected) {
+        Serial.println();
+        Serial.print("Подключено. IP: ");
         Serial.println(WiFi.localIP());
+        break; // Выходим из цикла, так как подключение успешно
       } else {
-        Serial.println("Not connected");
+        Serial.println();
+        Serial.println("Не удалось подключиться");
       }
     }
   }
+
   if (!isConnected) {
     myConnect();
   }
@@ -182,6 +206,7 @@ bool S_WiFi::isSSID(String ssid)
   if (wifiCount == 0)
   {
     Serial.println("no networks found");
+    S_Mode::setConfigWifiMode("no networks found");
   }
   else
   {
@@ -220,7 +245,11 @@ bool S_WiFi::accessPoint()
   mode = AP;
   boolean result = WiFi.softAP("ESPsoftAP_01", "pass-to-soft-AP");
   if (result) {
-    Serial.println("AP created");
+    Serial.print("AP created: ");
+    Serial.print(WiFi.softAPSSID());
+    Serial.print(" IP: ");
+    Serial.println(WiFi.softAPIP());
+    S_Mode::setConfigWifiMode("AP created " + WiFi.softAPSSID());
   }
   return result;
 }
