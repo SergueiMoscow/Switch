@@ -1,10 +1,12 @@
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include "S_Settings.h"
 #include "S_FS.h"
 #include "S_Devices.h"
 #include "S_Common.h"
+#include <TimeLib.h>
 
 #define MQTT_SETTINGS_FILE "/mqtt.json"
 #define GLOBAL_SETTINGS_FILE "/global.json"
@@ -39,5 +41,5 @@ class S_MQTT
         // void init();
         String getSubscribeString();
         void connect();
-
+        bool sendTimeRequest();
 };

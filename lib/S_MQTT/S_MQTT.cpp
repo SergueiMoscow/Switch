@@ -1,17 +1,5 @@
 #include "S_MQTT.h"
 
-// S_MQTT::S_MQTT()
-// {
-//     init();
-// }
-
-// S_MQTT::S_MQTT(PubSubClient* client, S_Devices* devicesPtr)
-// {
-//     mqttClient = client;
-//     devices = devicesPtr;
-// }
-
-// void S_MQTT::init(PubSubClient *client, S_Devices *devicesPtr)
 void S_MQTT::init(PubSubClient* client, S_Devices* devicesPtr)
 {
     mqttClient = client;
@@ -65,16 +53,38 @@ void callback(char *topic, byte *msg, unsigned int len)
 {
     extern S_Devices devices;
     extern S_MQTT sMQTT;
-    Serial.println("Callback: " + (String)topic + ": ");
-    String message;
-    for (int i = 0; i < len; i++)
-    {
-        message += (char)msg[i];
+    
+    String topicStr = String(topic);
+    Serial.println("Callback: " + topicStr + ": ");
+
+    // Проверка на валидность входных данных
+    if (!msg || len == 0) {
+        Serial.println("Invalid message received");
+        return;
     }
-    Serial.print("Callback: " + (String)topic + ": " + message);
-    devices.callback((String)topic, message);
-    sMQTT.publish(false);
-    return;
+
+    String message = String((char*)msg).substring(0, len);
+    Serial.println("Callback: " + topicStr + ": " + message);
+
+    if (topicStr.endsWith("/set/time")) {
+        DynamicJsonDocument doc(1024);
+        DeserializationError error = deserializeJson(doc, message);
+        
+        if (!error) {
+            if (doc.containsKey("unixtime")) {
+                time_t unixTime = doc["unixtime"].as<long>();
+                setTime(unixTime);
+                Serial.println("Time set to: " + String(unixTime));
+            } else {
+                Serial.println("No unixtime field in JSON");
+            }
+        } else {
+            Serial.println("JSON parse error: " + String(error.c_str()));
+        }
+    } else {
+        devices.callback(topicStr, message);
+        sMQTT.publish(false);
+    }
 }
 
 void S_MQTT::setServer()
@@ -98,7 +108,7 @@ void S_MQTT::setServer()
 
 void S_MQTT::connect()
 {
-    bool debug = true;
+    bool debug = false;
     Serial.println("S_MQTT.cpp connect 1");
     if (WiFi.status() != WL_CONNECTED) {
         Serial.println("WiFi not connected, skipping MQTT connect");
@@ -212,12 +222,6 @@ void S_MQTT::publish(bool force)
 void S_MQTT::loop()
 {
     unsigned long curMillis = millis();
-    // Serial.print("S_MQTT.cpp loop condition: curMillis: " + curMillis);
-    // Serial.print(" lastPubliched: " + lastPublished);
-    // Serial.print(" PeriodSec " + periodSec);
-    // bool result = max(curMillis, lastPublished) - min(curMillis, lastPublished) >= periodSec * 1000UL;
-    // Serial.print(" Result: " + result);
-
     if (max(curMillis, lastPublished) - min(curMillis, lastPublished) >= periodSec * 1000UL)
     {
         if (isConfigured && !mqttClient->connected())
@@ -240,4 +244,10 @@ void S_MQTT::loop()
     if (devices->loop() > 0) {
         publish(false);
     }
+}
+
+bool S_MQTT::sendTimeRequest() {
+    String publishTopic = rootTopic + "gettime";
+    mqttClient->publish((publishTopic).c_str(), "", false);
+    return now() > getBuildUnixTime();
 }

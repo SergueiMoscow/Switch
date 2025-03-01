@@ -6,6 +6,8 @@
 #include "TimeLib.h"
 #include <Arduino_JSON.h>
 #include <time.h>
+#include <buildTime.h>
+#include <ArduinoJson.h>
 
 #ifndef _S_Common_
 #define _S_Common_

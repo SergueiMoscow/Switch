@@ -35,6 +35,7 @@ namespace S_Common
     //===================================
     // getTime (common)
     //===================================
+    // Возвращает текущее время
     String S_Common::getTime(String type = "A")
     {
         String cYear = String(year());
@@ -106,37 +107,55 @@ namespace S_Common
 
     bool S_Common::checkTime(String url, bool force = false)
     {
-        bool debug = false;
+        const bool debug = false;  // Выносим константу на уровень функции
         static unsigned long msCheck = 0;
         static unsigned long lastGetByUrl = 0;
         unsigned long curMillis = millis();
-        String strJsonDate;
-        String dayStamp;
-        String timeStamp;
-        JSONVar jsonDate;
-
-        if ((curMillis > msCheck ? curMillis - msCheck : msCheck - curMillis) > MILLIS_CHECK_TIME || msCheck == 0 || force)
+    
+        // Проверяем, нужно ли обновлять время
+        if ((curMillis > msCheck ? curMillis - msCheck : msCheck - curMillis) > MILLIS_CHECK_TIME 
+            || msCheck == 0 
+            || force)
         {
-            bool debug = false;
-            strJsonDate = getURL(url);
-            if (debug) Serial.print(url);
-            if (debug) Serial.println(strJsonDate);
-            lastGetByUrl = millis();
-            jsonDate=JSON.parse(strJsonDate);
-            long unixtime = (long)jsonDate["unixtime"];
+            String strJsonDate = getURL(url);
+            
             if (debug) {
-                Serial.print("S_Common.cpp: jsonDate: ");
-                Serial.println(jsonDate);
-                Serial.print("S_Common.cpp: unixtime: ");
-                Serial.println(JSON.stringify(jsonDate["unixtime"]));
-                Serial.println(JSON.stringify(jsonDate["datetime"]));
-                Serial.print("Long unixtime: ");
-                Serial.println(unixtime);
+                Serial.print("URL: ");
+                Serial.println(url);
+                Serial.print("Response: ");
+                Serial.println(strJsonDate);
             }
-            setTime(unixtime);
+    
+            lastGetByUrl = millis();
+    
+            // Парсим JSON с помощью ArduinoJson
+            DynamicJsonDocument doc(1024);  // Создаем документ с буфером 1024 байта
+            DeserializationError error = deserializeJson(doc, strJsonDate);
+    
+            if (!error) {
+                // Извлекаем unixtime
+                long unixtime = doc["unixtime"].as<long>();
+                
+                if (debug) {
+                    Serial.println("S_Common.cpp: Debug info:");
+                    Serial.print("unixtime: ");
+                    Serial.println(unixtime);
+                    Serial.print("datetime: ");
+                    Serial.println(doc["datetime"].as<String>());
+                }
+    
+                setTime(unixtime);
+            } else {
+                if (debug) {
+                    Serial.print("Failed to parse JSON: ");
+                    Serial.println(error.c_str());
+                }
+                // Можно добавить return false в случае ошибки парсинга
+            }
         }
+    
         msCheck = millis();
-        return now() > (time_t)(1681479472UL);
+        return now() > getBuildUnixTime();
     }
 
     String S_Common::deleteQuotes(String str)

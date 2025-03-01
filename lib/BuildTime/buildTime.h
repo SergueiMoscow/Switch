@@ -79,4 +79,23 @@
 #define BUILD_SEC_CH1 (__TIME__[7]-'0')
 #define BUILD_SEC (BUILD_SEC_CH0*10+BUILD_SEC_CH1)
 
+typedef struct {
+    int year;
+    int month;
+    int day;
+    int hour;
+    int min;
+    int sec;
+} BuildTime;
+
+#define BUILD_TIME_INITIALIZER { \
+    .year = BUILD_YEAR, \
+    .month = BUILD_MONTH, \
+    .day = BUILD_DAY, \
+    .hour = BUILD_HOUR, \
+    .min = BUILD_MIN, \
+    .sec = BUILD_SEC \
+}
+
+time_t getBuildUnixTime();
 #endif
