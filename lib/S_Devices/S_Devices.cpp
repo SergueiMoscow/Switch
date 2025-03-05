@@ -1,30 +1,75 @@
 #include "S_Devices.h"
 
-S_Devices::S_Devices()
-{
-    init();
+S_Devices::S_Devices() {
+    dsInstance = nullptr;
+    num_relays = 0;
+    setupModules();
 }
 
-void S_Devices::init()
-{
+void S_Devices::setupModules() {
     S_FS fs = S_FS();
     if (!fs.exists("/devices.json")) {
-      S_Mode::setConfigMQTTMode("No devices.json found");
-      return;
+        S_Mode::setConfigMQTTMode("No devices.json found");
+        return;
     }
     config = JSON.parse(fs.readFile("/devices.json"));
-    Serial.println("Devices config:");
-    Serial.println(JSON.stringify(config));
-    num_relays = 0;
+    Serial.println("Devices config parsed: " + JSON.stringify(config));
+    
     JSONVar keys = config.keys();
+    if (keys.length() == 0) {
+        Serial.println("Error: No devices found in config");
+        return;
+    }
+
+    num_relays = 0;
     for (int i = 0; i < keys.length(); i++) {
         String type = clearValue(config[keys[i]]["type"]);
+        Serial.println("Initializing device: " + String(keys[i]) + ", type: " + type);
         if (type == "Relay") {
             initRelay(config[keys[i]]);
+        } else if (type == "DS18B20") {
+            initDS18B20(config[keys[i]]);
         }
     }
 }
 
+void S_Devices::initDS18B20(JSONVar device) {
+    Serial.println("S_Devices::initDS18B20 starting for device: " + JSON.stringify(device));
+    Serial.print("S_Devices::initDS18B20 - device['type'] raw: ");
+    Serial.println(JSON.stringify(device["type"])); // Проверяем точное значение conf["type"]
+    Serial.print("S_Devices::initDS18B20 - device['pin'] raw: ");
+    Serial.println(JSON.stringify(device["pin"])); // Проверяем точное значение conf["pin"]
+    Serial.print("S_Devices::initDS18B20 - device address: ");
+    Serial.println((unsigned long)&device, HEX);
+    int pin = getPin(device["pin"]);
+    dsInstance = &S_DS::getInstance(pin);
+    Serial.println("S_Devices::initDS18B20 completed, dsInstance: " + String((unsigned long)dsInstance, HEX));
+}
+
+float S_Devices::getTemperature(String deviceName, String sensorName) {
+    JSONVar keys = config.keys();
+    for (int i = 0; i < keys.length(); i++) {
+        String name = clearValue(keys[i]);
+        if (name == deviceName && clearValue(config[keys[i]]["type"]) == "DS18B20") {
+            if (dsInstance == nullptr) {
+                Serial.println("Error: DS18B20 instance not initialized for device " + deviceName);
+                return NAN;
+            }
+            float* temperatures = dsInstance->getTemperature(); // Получаем указатель на массив
+            JSONVar sensors = config[keys[i]]["sensors"];
+            for (int j = 0; j < sensors.length(); j++) {
+                String sName = clearValue(sensors[j]["name"]);
+                if (sName == sensorName) {
+                    return temperatures[j]; // Возвращаем температуру конкретного датчика
+                }
+            }
+            Serial.println("Sensor " + sensorName + " not found in device " + deviceName);
+            return NAN;
+        }
+    }
+    Serial.println("Device " + deviceName + " not found or not DS18B20");
+    return NAN;
+}
 
 String S_Devices::clearValue(JSONVar value)
 {
@@ -109,19 +154,58 @@ JSONVar S_Devices::getJsonRelayValuesForPublish()
 
 int S_Devices::getRelayByPin(int pin)
 {
-    bool debug = true;
+    bool debug = false;
     if (debug) Serial.println("getRelayByPin " + (String)pin);
     if (debug) Serial.println("numRelays " + (String)num_relays);
     for (int i = 0; i < num_relays; i++) {
         if (debug) Serial.println("Devices::getRelayByPin Checking " + (String)i + " pin " + (String)relays[i][RELAY_PIN]);
         if (relays[i][RELAY_PIN] == pin) {
-            if (debug) Serial.println("Searching " + (String)relays[i][RELAY_PIN]);
+            if (debug) Serial.println("S_Devices::getRelayByPin Searching " + (String)relays[i][RELAY_PIN]);
             if (debug) Serial.println("Found " + (String)i);
             return i;
         }
     }
     if (debug) Serial.println("Relay by pin not found");
     return -1;
+}
+
+JSONVar S_Devices::getJsonSensorValuesForPublish() {
+    bool debug = true;
+    JSONVar result = JSON.parse("{}");
+    JSONVar keys = config.keys();
+    
+    for (int i = 0; i < keys.length(); i++) {
+        String deviceName = clearValue(keys[i]);
+        if (debug) Serial.print("S_Device::getJsonSensorValuesForPublish, Device: " + deviceName);
+        String type = clearValue(config[keys[i]]["type"]);
+        if (debug) Serial.println(" Type: " + type);
+        if (type == "DS18B20") {
+            if (debug) Serial.println("S_Device::getJsonSensorValuesForPublish, DS18B20");
+            if (dsInstance == nullptr) {
+                Serial.println("Error: DS18B20 instance not initialized, skipping sensor data");
+                continue;
+            }
+            if (debug) Serial.println("trying to get temperature");
+            float* temperatures = dsInstance->getTemperature(); // Получаем указатель на массив
+            JSONVar sensors = config[keys[i]]["sensors"];
+            if (debug) Serial.println("S_Device::getJsonSensorValuesForPublish, Sensors: " + JSON.stringify(sensors));
+            JSONVar sensorData = JSON.parse("{}");
+            for (int j = 0; j < sensors.length(); j++) {
+                String sensorName = clearValue(sensors[j]["name"]);
+                if (debug) Serial.print("S_Device::getJsonSensorValuesForPublish, SensorName: " + sensorName);
+                float temp = temperatures[j];
+                if (debug) Serial.println(" temp: " + String(temp));
+                if (!isnan(temp)) {
+                    sensorData[sensorName] = temp; // Записываем температуру в JSON
+                }
+            }
+            if (sensorData.keys().length() > 0) {
+                result[deviceName] = sensorData; // Добавляем данные датчиков в результат
+            }
+        }
+    }
+    if (debug) Serial.println("S_Device::getJsonSensorValuesForPublish, Result: " + JSON.stringify(result));
+    return result;
 }
 
 void S_Devices::callback(String topic, String value)
@@ -243,4 +327,25 @@ int S_Devices::loop()
         }
     }
     return result;
+}
+
+JSONVar S_Devices::getJsonAllValuesForPublish() {
+    JSONVar devicesValues = getJsonRelayValuesForPublish();
+    JSONVar sensorValues = getJsonSensorValuesForPublish();
+    Serial.println("getJsonAllValuesForPublish devicesValues: " + JSON.stringify(devicesValues));
+    Serial.println("getJsonAllValuesForPublish sensorValues: " + JSON.stringify(sensorValues));
+    
+    JSONVar keys = sensorValues.keys();
+    for (int i = 0; i < keys.length(); i++) {
+        String deviceName = String(keys[i]);
+        JSONVar sensorData = sensorValues[keys[i]]; // Получаем вложенный объект
+        JSONVar tempObject = JSON.parse(JSON.stringify(sensorData)); // Явно копируем объект
+        Serial.println("Adding device: " + deviceName + " with value: " + JSON.stringify(tempObject));
+        devicesValues[deviceName] = tempObject;
+    }
+    
+    devicesValues["time"] = S_Common::S_Common::getUTime();
+    Serial.print("getJsonAllValuesForPublish: ");
+    Serial.println(JSON.stringify(devicesValues));
+    return devicesValues;
 }

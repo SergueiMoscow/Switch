@@ -145,7 +145,6 @@ void S_MQTT::connect()
     {
         if (mqttClient->connect(clientId.c_str(), user.c_str(), password.c_str()), true)
         {
-            Serial.println("Connected to MQTT ");
             publish(false);
             String subscribeString = getSubscribeString();
             Serial.println("Subscribe to: " + subscribeString);
@@ -198,25 +197,45 @@ void S_MQTT::setRootTopic()
     rootTopic = object + "/" + room + "/" + device + "/";
 }
 
-void S_MQTT::publish(bool force)
-{
-    String publishTopic = rootTopic + "state";
-    JSONVar devicesValues = devices->getJsonRelayValuesForPublish();
-    devicesValues["time"] = S_Common::S_Common::getUTime();
-    // for IoT нужно ли???
-    // devicesValues["order"] = (hour() * 60 * 60) + (minute() * 60) + second();
-    // devicesValues["id"] = rootTopic;
-    // devicesValues["pageId"] = (String)year() + String(month()) + String(day());
-    Serial.println("Mqtt.publish: " + publishTopic + JSON.stringify(devicesValues));
 
-    mqttClient->publish((publishTopic).c_str(), JSON.stringify(devicesValues).c_str(), true);
-    JSONVar keys = devicesValues.keys();
-    for (int i = 0; i < keys.length(); i++) {
-        String topic = rootTopic + clearValue(keys[i]);
-        String value = clearValue(devicesValues[keys[i]]);
+void S_MQTT::publish(bool force) {
+    String publishTopic = rootTopic + "state";
+    
+    // Получаем все данные сразу
+    JSONVar devicesValues = devices->getJsonAllValuesForPublish();
+    
+    // Публикация общего состояния
+    String payload = JSON.stringify(devicesValues);
+    Serial.println("Mqtt.publish: " + publishTopic + " " + payload);
+    mqttClient->publish(publishTopic.c_str(), payload.c_str(), true);
+    
+    // Публикация отдельных топиков для реле
+    JSONVar relayKeys = devices->getJsonRelayValuesForPublish().keys();
+    for (int i = 0; i < relayKeys.length(); i++) {
+        String topic = rootTopic + clearValue(relayKeys[i]);
+        String value = clearValue(devicesValues[relayKeys[i]]);
         mqttClient->publish(topic.c_str(), value.c_str(), true);
     }
-
+    
+    // Публикация отдельных топиков для датчиков
+    JSONVar sensorValues = devices->getJsonSensorValuesForPublish();
+    JSONVar keys = sensorValues.keys();
+    if (keys.length() > 0) {
+        for (int i = 0; i < keys.length(); i++) {
+            String deviceName = clearValue(keys[i]);
+            JSONVar sensors = sensorValues[keys[i]];
+            JSONVar sensorKeys = sensors.keys();
+            for (int j = 0; j < sensorKeys.length(); j++) {
+                String sensorName = clearValue(sensorKeys[j]);
+                String topic = rootTopic + deviceName + "/" + sensorName;
+                double tempValue = (double)sensors[sensorKeys[j]];
+                String value = String(tempValue, 2);
+                mqttClient->publish(topic.c_str(), value.c_str(), true);
+            }
+        }
+    } else {
+        Serial.println("S_MQTT.cpp: No sensor data available");
+    }    
 }
 
 void S_MQTT::loop()

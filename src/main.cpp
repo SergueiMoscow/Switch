@@ -40,7 +40,8 @@ void setup()
   sWiFi.connect();
   Serial.println("main.cpp. Wifi connected, trying to setup web server");
   webServerSetup();
-  devices.init();
+  // Важно сделать resetInstance раньше MQTT, на всякий случай раньше devices.init.
+  devices.setupModules();
   Serial.println("main.cpp. Trying to setup MQTT");
   sMQTT.init(mqttClientPtr, devicesPtr);
   Serial.println("main.cpp. Trying to set setUTime");
