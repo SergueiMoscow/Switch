@@ -170,41 +170,39 @@ int S_Devices::getRelayByPin(int pin)
 }
 
 JSONVar S_Devices::getJsonSensorValuesForPublish() {
-    bool debug = true;
-    JSONVar result = JSON.parse("{}");
+    JSONVar result;
+
     JSONVar keys = config.keys();
-    
     for (int i = 0; i < keys.length(); i++) {
-        String deviceName = clearValue(keys[i]);
-        if (debug) Serial.print("S_Device::getJsonSensorValuesForPublish, Device: " + deviceName);
-        String type = clearValue(config[keys[i]]["type"]);
-        if (debug) Serial.println(" Type: " + type);
-        if (type == "DS18B20") {
-            if (debug) Serial.println("S_Device::getJsonSensorValuesForPublish, DS18B20");
-            if (dsInstance == nullptr) {
-                Serial.println("Error: DS18B20 instance not initialized, skipping sensor data");
-                continue;
-            }
-            if (debug) Serial.println("trying to get temperature");
-            float* temperatures = dsInstance->getTemperature(); // Получаем указатель на массив
-            JSONVar sensors = config[keys[i]]["sensors"];
-            if (debug) Serial.println("S_Device::getJsonSensorValuesForPublish, Sensors: " + JSON.stringify(sensors));
-            JSONVar sensorData = JSON.parse("{}");
+        String deviceName = String(keys[i]);
+        String deviceType = String(config[keys[i]]["type"]);
+        Serial.println("S_Device::getJsonSensorValuesForPublish, Device: " + deviceName + " Type: " + deviceType);
+        if (deviceType != "DS18B20") continue;
+
+        JSONVar sensors = config[keys[i]]["sensors"];
+        JSONVar sensorValues;
+        Serial.println("S_Device::getJsonSensorValuesForPublish, DS18B20");
+        Serial.println("trying to get temperature");
+        float* temperatures = dsInstance->getTemperature();
+        if (temperatures == nullptr) {
+            Serial.println("S_Device::getJsonSensorValuesForPublish: No temperature data available");
             for (int j = 0; j < sensors.length(); j++) {
-                String sensorName = clearValue(sensors[j]["name"]);
-                if (debug) Serial.print("S_Device::getJsonSensorValuesForPublish, SensorName: " + sensorName);
-                float temp = temperatures[j];
-                if (debug) Serial.println(" temp: " + String(temp));
-                if (!isnan(temp)) {
-                    sensorData[sensorName] = temp; // Записываем температуру в JSON
-                }
+                String sensorName = String(sensors[j]["name"]);
+                sensorValues[sensorName] = NAN; // Устанавливаем NAN для всех датчиков
+                Serial.println("S_Device::getJsonSensorValuesForPublish, SensorName: " + sensorName + " temp: NAN");
             }
-            if (sensorData.keys().length() > 0) {
-                result[deviceName] = sensorData; // Добавляем данные датчиков в результат
+        } else {
+            Serial.println("S_Device::getJsonSensorValuesForPublish, Sensors: " + JSON.stringify(sensors));
+            for (int j = 0; j < sensors.length(); j++) {
+                String sensorName = String(sensors[j]["name"]);
+                float temp = temperatures[j];
+                sensorValues[sensorName] = temp;
+                Serial.println("S_Device::getJsonSensorValuesForPublish, SensorName: " + sensorName + " temp: " + String(temp));
             }
         }
+        result[deviceName] = sensorValues;
     }
-    if (debug) Serial.println("S_Device::getJsonSensorValuesForPublish, Result: " + JSON.stringify(result));
+    Serial.println("S_Device::getJsonSensorValuesForPublish, Result: " + JSON.stringify(result));
     return result;
 }
 

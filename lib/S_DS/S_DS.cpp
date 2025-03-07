@@ -41,14 +41,21 @@ int S_DS::init(int pin) {
 
 float* S_DS::getTemperature() {
   if (debug) Serial.println("S_DS::getTemperature() request temp");
-  sensors.requestTemperatures(); // Запрашиваем температуру со всех датчиков
+  if (sensors_count == 0) {
+      if (debug) Serial.println("S_DS::getTemperature: No sensors available, returning null");
+      return nullptr; // Возвращаем nullptr, если датчиков нет
+  }
+  sensors.requestTemperatures();
   if (debug) Serial.println("S_DS::getTemperature() before cycle");
   for (int i = 0; i < sensors_count; i++) {
-    if (debug) Serial.println("S_DS::getTemperature() in cycle");
-    temperatures[i] = sensors.getTempCByIndex(i); // Перезаписываем данные
-    Serial.println("S_DS::getTemperature() Sensor " + String(i) + ": " + String(temperatures[i]));
+      if (debug) Serial.println("S_DS::getTemperature() in cycle");
+      temperatures[i] = sensors.getTempCByIndex(i);
+      if (debug) Serial.println("S_DS::getTemperature() Sensor " + String(i) + ": " + String(temperatures[i]));
+      if (isnan(temperatures[i])) {
+          Serial.println("S_DS::getTemperature: Sensor " + String(i) + " returned NAN");
+      }
   }
-  return temperatures; // Возвращаем указатель на существующий массив
+  return temperatures;
 }
 
 int S_DS::getSensorsCount() {
