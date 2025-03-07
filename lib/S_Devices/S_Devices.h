@@ -6,18 +6,9 @@
 #include "S_Mode.h"
 #include "S_FS.h"
 #include "S_DS.h"
-#include "S_JsonSettings.h" // Заменил S_Settings
+#include "S_Relay.h"
+#include "S_JsonSettings.h"
 #include "S_Common.h"
-
-#define MAX_RELAYS 4
-
-struct RelayConfig {
-    String pin;
-    String name;
-    String description;
-    String on; // "LOW" или "HIGH"
-    int maxOn; // Максимальное время работы в секундах
-};
 
 struct DS18B20Config {
     String pin;
@@ -25,33 +16,24 @@ struct DS18B20Config {
         String name;
         String description;
     };
-    Sensor sensors[2]; // Максимум 2 сенсора для примера, можно сделать динамическим позже
+    Sensor sensors[2]; // Максимум 2 сенсора
     int sensorCount;
 };
 
 class S_Devices {
 private:
     S_DS* dsInstance;
-    int numRelays;
-    RelayConfig relays[MAX_RELAYS];
-    unsigned long relayTurnedOn[MAX_RELAYS];
-    unsigned long relayTurnOff[MAX_RELAYS];
-    DS18B20Config dsConfig; // Пока одна конфигурация DS18B20
+    S_Relay* relayInstance;
+    DS18B20Config dsConfig;
     bool dsInitialized;
 
-    void initRelay(const JsonObject& device, int index);
     void initDS18B20(const JsonObject& device);
-    int getRelayByPin(int pin);
-    int getPinByName(const String& name);
-    void setTimeToTurnOff(int relay, unsigned long sec, const RelayConfig& config);
-    String getDeviceNameFromTopic(const String& topic);
-    RelayConfig* getRelayByName(const String& name);
+    static const String& getDeviceNameFromTopic(const String& topic);
 
 public:
     S_Devices();
     int getPin(const String& pinStr);
     float getTemperature(const String& deviceName, const String& sensorName);
-    void changeRelay(int relay, const String& value, const String& caller);
     DynamicJsonDocument getJsonRelayValuesForPublish();
     void callback(const String& topic, const String& value);
     int loop();
