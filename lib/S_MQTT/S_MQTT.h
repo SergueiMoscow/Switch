@@ -1,8 +1,11 @@
+#ifndef _S_MQTT_
+#define _S_MQTT_
+
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
-#include "S_Settings.h"
+#include "S_JsonSettings.h" // Новый класс вместо S_Settings
 #include "S_FS.h"
 #include "S_Devices.h"
 #include "S_Common.h"
@@ -11,35 +14,40 @@
 #define MQTT_SETTINGS_FILE "/mqtt.json"
 #define GLOBAL_SETTINGS_FILE "/global.json"
 #define SUBSCRIBE_POSTFIX "set"
-// Использование:
-// Home/Room/Device/set/RelayName
-// RelayName - из devices.json $.<device>.name: "RelayName"
 
-class S_MQTT
-{
-    private:
-        JSONVar mqttSettings;
-        JSONVar globalSettings;
-        PubSubClient* mqttClient;
-        S_Devices* devices;
-        unsigned long lastPublished;
-        unsigned int periodSec;
-        unsigned long lastTryConnect;
-        bool isConfigured = false;
-        void loadConfig();
-        void setRootTopic();
-        String rootTopic;
-        String clearValue(JSONVar value);
-        String clearValue(JSONVar value, String default_value);
-        void setServer();
-        String mqttServer;
-    public:
-        // S_MQTT(PubSubClient* client, S_Devices* devices);
-        void publish(bool force);
-        void loop();
-        void init(PubSubClient* client, S_Devices* devices);
-        // void init();
-        String getSubscribeString();
-        void connect();
-        bool sendTimeRequest();
+struct MQTTConfig {
+    String server;
+    uint16_t port;
+    String user;
+    String password;
+    uint16_t periodSec;
+    bool active;
 };
+
+class S_MQTT {
+private:
+    S_JsonSettings mqttSettings;
+    S_JsonSettings globalSettings;
+    PubSubClient* mqttClient;
+    S_Devices* devices;
+    MQTTConfig activeConfig;
+    unsigned long lastPublished = 0;
+    unsigned long lastTryConnect = 0;
+    bool isConfigured = false;
+    String rootTopic;
+
+    void loadConfig();
+    void setRootTopic();
+    void setServer();
+    bool loadActiveConfig(const JsonObject& obj);
+
+public:
+    void init(PubSubClient* client, S_Devices* devices);
+    void publish(bool force = false);
+    void loop();
+    String getSubscribeString();
+    void connect();
+    bool sendTimeRequest();
+};
+
+#endif

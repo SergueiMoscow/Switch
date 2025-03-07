@@ -3,8 +3,6 @@
 #include <Arduino.h>
 #include <Arduino_JSON.h>
 #include <LittleFS.h>
-// #include <ArduinoJson.h>
-// #include <S_DS.h>
 #include "S_FS.h"
 #include "S_Mode.h"
 
@@ -20,8 +18,8 @@
     String getSetting(String key, String def_value);
     void setSetting(String key, String value);
     bool setSettingsFile(String settingsFile);
-    String stringReplace(String before);
     static String delQuotes(JSONVar value);
     static String delQuotes(String value);
+    String stringReplace(String before);
   };
 #endif

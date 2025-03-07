@@ -17,6 +17,8 @@ public:
     // static String fileContent(const char *path);
     static bool exists(const char *path);
     static bool readJsonFile(const char *path, JsonDocument& doc);
+    static DynamicJsonDocument readJsonFileDynamic(const char *path);
+    static bool writeJsonFile(const char *path, const JsonDocument& doc);
 
 };
 
