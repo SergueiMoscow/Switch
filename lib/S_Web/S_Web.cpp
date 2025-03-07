@@ -66,7 +66,7 @@ void webServerLoop()
 void test()
 {
   S_FS fs = S_FS();
-  JSONVar fileList = fs.listDir("/"); // fs.listDir("/");
+  JSONVar fileList = fs.listDir("/");
   server.send(200, "text/plain", JSON.stringify(fileList));
 }
 

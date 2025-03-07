@@ -10,13 +10,14 @@ public:
     static S_DS& getInstance(int pin = -1);
     int init(int pin);
     int getSensorsCount();
+
 private:
-    S_DS(); // Приватный конструктор
+    S_DS();
     bool debug;
     static S_DS* instance;
     static bool isInitialized;
     int sensors_count;
-    float* temperatures; // Массив для хранения температур
+    float* temperatures;
     OneWire oneWire;
     DallasTemperature sensors;
 };

@@ -151,30 +151,31 @@ void S_MQTT::publish(bool force) {
     if (!mqttClient->connected() && !force) return;
 
     String publishTopic = rootTopic + "state";
-    JSONVar devicesValues = devices->getJsonAllValuesForPublish(); // Предполагается, что это остаётся JSONVar
-    String payload = JSON.stringify(devicesValues); // Пока оставляем как есть, можно позже адаптировать
+    DynamicJsonDocument devicesDoc = devices->getJsonAllValuesForPublish();
+    JsonObject devicesValues = devicesDoc.as<JsonObject>();
+    String payload;
+    serializeJson(devicesValues, payload);
     Serial.println("Publishing: " + publishTopic + " " + payload);
     mqttClient->publish(publishTopic.c_str(), payload.c_str(), true);
 
-    JSONVar relayKeys = devices->getJsonRelayValuesForPublish().keys();
-    for (int i = 0; i < relayKeys.length(); i++) {
-        String topic = rootTopic + S_JsonSettings::removeQuotes(JSON.stringify(relayKeys[i]));
-        String value = S_JsonSettings::removeQuotes(JSON.stringify(devicesValues[relayKeys[i]]));
+    DynamicJsonDocument relaysDoc = devices->getJsonRelayValuesForPublish();
+    JsonObject relayValues = relaysDoc.as<JsonObject>();
+    for (JsonPair kv : relayValues) {
+        String topic = rootTopic + kv.key().c_str();
+        String value = kv.value().as<String>();
         mqttClient->publish(topic.c_str(), value.c_str(), true);
     }
 
-    JSONVar sensorValues = devices->getJsonSensorValuesForPublish();
-    JSONVar keys = sensorValues.keys();
-    if (keys.length() > 0) {
-        for (int i = 0; i < keys.length(); i++) {
-            String deviceName = S_JsonSettings::removeQuotes(JSON.stringify(keys[i]));
-            JSONVar sensors = sensorValues[keys[i]];
-            JSONVar sensorKeys = sensors.keys();
-            for (int j = 0; j < sensorKeys.length(); j++) {
-                String sensorName = S_JsonSettings::removeQuotes(JSON.stringify(sensorKeys[j]));
+    DynamicJsonDocument sensorsDoc = devices->getJsonSensorValuesForPublish();
+    JsonObject sensorValues = sensorsDoc.as<JsonObject>();
+    if (!sensorValues.isNull()) {
+        for (JsonPair deviceKv : sensorValues) {
+            String deviceName = deviceKv.key().c_str();
+            JsonObject sensors = deviceKv.value().as<JsonObject>();
+            for (JsonPair sensorKv : sensors) {
+                String sensorName = sensorKv.key().c_str();
                 String topic = rootTopic + deviceName + "/" + sensorName;
-                double tempValue = (double)sensors[sensorKeys[j]];
-                String value = String(tempValue, 2);
+                String value = sensorKv.value().as<String>();
                 mqttClient->publish(topic.c_str(), value.c_str(), true);
             }
         }
