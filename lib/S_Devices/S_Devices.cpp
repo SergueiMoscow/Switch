@@ -3,9 +3,11 @@
 S_Devices::S_Devices() {
     dsInstance = nullptr;
     relayInstance = new S_Relay();
-    dhtInstance = nullptr; // Инициализируем как nullptr
+    dhtInstance = nullptr;
+    mqInstance = nullptr; // Инициализируем как nullptr
     dsInitialized = false;
     dhtInitialized = false;
+    mqInitialized = false;
     setupModules();
 }
 
@@ -38,6 +40,9 @@ void S_Devices::setupModules() {
         } else if (type == "DHT" && !dhtInitialized) {
             initDHT(device);
             dhtInitialized = true;
+        } else if (type == "MQ" && !mqInitialized) {
+            initMQ(device);
+            mqInitialized = true;
         }
     }
 }
@@ -71,10 +76,25 @@ void S_Devices::initDHT(const JsonObject& device) {
     dhtConfig.name = device["name"] | "DHT_Default";
     dhtConfig.description = device["description"] | "";
     int pin = getPin(dhtConfig.pin);
-    dhtInstance = new S_DHT(pin, DHT22); // Пока только DHT22
+    dhtInstance = new S_DHT(pin, DHT22);
     dhtInstance->begin();
 
     Serial.println("S_Devices::initDHT completed on pin " + String(pin));
+}
+
+void S_Devices::initMQ(const JsonObject& device) {
+    Serial.println("S_Devices::initMQ starting for device:");
+    serializeJson(device, Serial);
+    Serial.println();
+
+    mqConfig.pin = device["pin"] | "";
+    mqConfig.name = device["name"] | "MQ_Default";
+    mqConfig.description = device["description"] | "";
+    int pin = getPin(mqConfig.pin);
+    mqInstance = new S_MQ(pin);
+    mqInstance->begin();
+
+    Serial.println("S_Devices::initMQ completed on pin " + String(pin));
 }
 
 int S_Devices::getPin(const String& pinStr) {
@@ -95,6 +115,8 @@ int S_Devices::getPin(const String& pinStr) {
         if (pinStr == "D13") return D13;
         if (pinStr == "D14") return D14;
         if (pinStr == "D15") return D15;
+    } else if (pinStr == "A0") {
+        return A0;
     }
     return atoi(pinStr.c_str());
 }
@@ -140,10 +162,16 @@ DynamicJsonDocument S_Devices::getJsonSensorValuesForPublish() {
     }
 
     if (dhtInitialized && dhtInstance != nullptr) {
-        dhtInstance->read(); // Обновляем данные
+        dhtInstance->read();
         JsonObject dhtValues = result.createNestedObject(dhtConfig.name);
         dhtValues["temperature"] = dhtInstance->getTemperature();
         dhtValues["humidity"] = dhtInstance->getHumidity();
+    }
+
+    if (mqInitialized && mqInstance != nullptr) {
+        mqInstance->read();
+        JsonObject mqValues = result.createNestedObject(mqConfig.name);
+        mqValues["gas"] = mqInstance->getValue();
     }
 
     return doc;
