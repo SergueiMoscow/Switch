@@ -3,7 +3,9 @@
 S_Devices::S_Devices() {
     dsInstance = nullptr;
     relayInstance = new S_Relay();
+    dhtInstance = nullptr; // Инициализируем как nullptr
     dsInitialized = false;
+    dhtInitialized = false;
     setupModules();
 }
 
@@ -33,6 +35,9 @@ void S_Devices::setupModules() {
         if (type == "DS18B20" && !dsInitialized) {
             initDS18B20(device);
             dsInitialized = true;
+        } else if (type == "DHT" && !dhtInitialized) {
+            initDHT(device);
+            dhtInitialized = true;
         }
     }
 }
@@ -43,6 +48,7 @@ void S_Devices::initDS18B20(const JsonObject& device) {
     Serial.println();
 
     dsConfig.pin = device["pin"] | "";
+    dsConfig.name = device["name"] | "DS18B20_Default";
     int pin = getPin(dsConfig.pin);
     dsInstance = &S_DS::getInstance(pin);
 
@@ -54,6 +60,21 @@ void S_Devices::initDS18B20(const JsonObject& device) {
     }
 
     Serial.println("S_Devices::initDS18B20 completed, dsInstance: " + String((unsigned long)dsInstance, HEX));
+}
+
+void S_Devices::initDHT(const JsonObject& device) {
+    Serial.println("S_Devices::initDHT starting for device:");
+    serializeJson(device, Serial);
+    Serial.println();
+
+    dhtConfig.pin = device["pin"] | "";
+    dhtConfig.name = device["name"] | "DHT_Default";
+    dhtConfig.description = device["description"] | "";
+    int pin = getPin(dhtConfig.pin);
+    dhtInstance = new S_DHT(pin, DHT22); // Пока только DHT22
+    dhtInstance->begin();
+
+    Serial.println("S_Devices::initDHT completed on pin " + String(pin));
 }
 
 int S_Devices::getPin(const String& pinStr) {
@@ -79,12 +100,7 @@ int S_Devices::getPin(const String& pinStr) {
 }
 
 float S_Devices::getTemperature(const String& deviceName, const String& sensorName) {
-    if (!dsInitialized || dsInstance == nullptr) {
-        Serial.println("Error: DS18B20 instance not initialized");
-        return NAN;
-    }
-
-    if (deviceName == "device3") {
+    if (dsInitialized && dsInstance != nullptr && deviceName == dsConfig.name) {
         float* temperatures = dsInstance->getTemperature();
         for (int i = 0; i < dsConfig.sensorCount; i++) {
             if (dsConfig.sensors[i].name == sensorName) {
@@ -92,7 +108,12 @@ float S_Devices::getTemperature(const String& deviceName, const String& sensorNa
             }
         }
         Serial.println("Sensor " + sensorName + " not found in device " + deviceName);
+        return NAN;
     }
+    if (dhtInitialized && dhtInstance != nullptr && deviceName == dhtConfig.name && sensorName == "temperature") {
+        return dhtInstance->getTemperature();
+    }
+    Serial.println("Device " + deviceName + " not found or unsupported sensor " + sensorName);
     return NAN;
 }
 
@@ -106,7 +127,7 @@ DynamicJsonDocument S_Devices::getJsonSensorValuesForPublish() {
 
     if (dsInitialized && dsInstance != nullptr) {
         float* temperatures = dsInstance->getTemperature();
-        JsonObject sensorValues = result.createNestedObject("device3");
+        JsonObject sensorValues = result.createNestedObject(dsConfig.name);
         if (temperatures == nullptr) {
             for (int i = 0; i < dsConfig.sensorCount; i++) {
                 sensorValues[dsConfig.sensors[i].name] = NAN;
@@ -117,7 +138,19 @@ DynamicJsonDocument S_Devices::getJsonSensorValuesForPublish() {
             }
         }
     }
+
+    if (dhtInitialized && dhtInstance != nullptr) {
+        dhtInstance->read(); // Обновляем данные
+        JsonObject dhtValues = result.createNestedObject(dhtConfig.name);
+        dhtValues["temperature"] = dhtInstance->getTemperature();
+        dhtValues["humidity"] = dhtInstance->getHumidity();
+    }
+
     return doc;
+}
+
+void S_Devices::callback(const String& topic, const String& value) {
+    relayInstance->callback(topic, value, &S_Devices::getDeviceNameFromTopic);
 }
 
 const String& S_Devices::getDeviceNameFromTopic(const String& topic) {
@@ -127,10 +160,6 @@ const String& S_Devices::getDeviceNameFromTopic(const String& topic) {
     result = topic.substring(lastSlash + 1);
     Serial.println("getDeviceNameFromTopic result: " + result);
     return result;
-}
-
-void S_Devices::callback(const String& topic, const String& value) {
-    relayInstance->callback(topic, value, &S_Devices::getDeviceNameFromTopic);
 }
 
 int S_Devices::loop() {
