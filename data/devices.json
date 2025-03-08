@@ -1,11 +1,11 @@
 {
     "device1": {
         "type": "Relay",
-        "pin": "D3",
-        "name": "Light",
-        "description": "Свет",
+        "pin": "D6",
+        "name": "Bedroom",
+        "description": "WarmFloor bedroom",
         "on": "LOW",
-        "max_on": 20,
+        "max_on": 50,
         "automation1": {
             "type": "time",
             "timeon": "22:00",
@@ -14,17 +14,70 @@
         },
         "automation2": {
             "type": "temperature",
-            "device": "DS_Kitchen",
+            "device": "device3",
+            "max": 23,
+            "min": 18,
+            "action": "on"
+        }
+    },
+    "device2": {
+        "type": "Relay",
+        "pin": "D7",
+        "name": "Passage",
+        "description": "WarmFloor passage",
+        "on": "LOW",
+        "max_on": 50,
+        "automation1": {
+            "type": "time",
+            "timeon": "22:00",
+            "timeoff": "23:00",
+            "action": "off"
+        },
+        "automation2": {
+            "type": "temperature",
+            "device": "DS_Passage",
             "max": 23,
             "min": 18,
             "action": "on"
         }
     },
 
-    "device2": {
+
+    "device3": {
         "type": "DS18B20",
+        "pin": "D2",
+        "sensors": 
+        [
+          {
+            "name": "Bedroom",
+            "description":"У кровати"
+          },
+          {
+            "name": "Passage",
+            "description":"в коридоре"
+          }
+        ]
+    },
+    "device4": {
+        "type": "DHT",
         "pin": "D4",
-        "name": "DS_Kitchen",
-        "description": "Т пола на кухне"
+        "name": "RoomClimate",
+        "description": "Room temperature and humidity"
+    },
+    "device5": {
+        "type": "MQ",
+        "pin": "A0",
+        "name": "GasSensor",
+        "description": "Gas and smoke detector"
+    },
+    "device6": {
+        "type": "Buzzer",
+        "pin": "D3",
+        "name": "Alarm",
+        "triggers": [
+            {"device": "GasSensor", "parameter": "gas_ppm", "condition": "above", "threshold": 500},
+            {"device": "RoomClimate", "parameter": "temperature", "condition": "above", "threshold": 30},
+            {"device": "RoomClimate", "parameter": "humidity", "condition": "below", "threshold": 20}
+        ]
     }
 }

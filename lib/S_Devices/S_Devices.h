@@ -8,7 +8,8 @@
 #include "S_DS.h"
 #include "S_Relay.h"
 #include "S_DHT.h"
-#include "S_MQ.h" // Добавили новый класс
+#include "S_MQ.h"
+#include "S_Buzzer.h" // Добавили новый класс
 #include "S_JsonSettings.h"
 #include "S_Common.h"
 
@@ -35,23 +36,42 @@ struct MQConfig {
     String description;
 };
 
+struct BuzzerTrigger {
+    String device;
+    String parameter;
+    String condition;
+    float threshold;
+};
+
+struct BuzzerConfig {
+    String pin;
+    String name;
+    BuzzerTrigger triggers[3]; // Максимум 3 триггера
+    int triggerCount;
+};
+
 class S_Devices {
 private:
     S_DS* dsInstance;
     S_Relay* relayInstance;
     S_DHT* dhtInstance;
-    S_MQ* mqInstance; // Добавили экземпляр MQ
+    S_MQ* mqInstance;
+    S_Buzzer* buzzerInstance; // Добавили зуммер
     DS18B20Config dsConfig;
     DHTConfig dhtConfig;
     MQConfig mqConfig;
+    BuzzerConfig buzzerConfig;
     bool dsInitialized;
     bool dhtInitialized;
     bool mqInitialized;
+    bool buzzerInitialized;
 
     void initDS18B20(const JsonObject& device);
     void initDHT(const JsonObject& device);
     void initMQ(const JsonObject& device);
+    void initBuzzer(const JsonObject& device);
     static const String& getDeviceNameFromTopic(const String& topic);
+    void buzzerLoop();
 
 public:
     S_Devices();

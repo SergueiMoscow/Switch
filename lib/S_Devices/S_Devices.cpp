@@ -4,10 +4,12 @@ S_Devices::S_Devices() {
     dsInstance = nullptr;
     relayInstance = new S_Relay();
     dhtInstance = nullptr;
-    mqInstance = nullptr; // Инициализируем как nullptr
+    mqInstance = nullptr;
+    buzzerInstance = nullptr;
     dsInitialized = false;
     dhtInitialized = false;
     mqInitialized = false;
+    buzzerInitialized = false;
     setupModules();
 }
 
@@ -43,9 +45,13 @@ void S_Devices::setupModules() {
         } else if (type == "MQ" && !mqInitialized) {
             initMQ(device);
             mqInitialized = true;
+        } else if (type == "Buzzer" && !buzzerInitialized) {
+            initBuzzer(device);
+            buzzerInitialized = true;
         }
     }
 }
+
 
 void S_Devices::initDS18B20(const JsonObject& device) {
     Serial.println("S_Devices::initDS18B20 starting for device:");
@@ -93,8 +99,32 @@ void S_Devices::initMQ(const JsonObject& device) {
     int pin = getPin(mqConfig.pin);
     mqInstance = new S_MQ(pin);
     mqInstance->begin();
+    mqInstance->calibrate(); // Калибруем при старте
 
     Serial.println("S_Devices::initMQ completed on pin " + String(pin));
+}
+
+void S_Devices::initBuzzer(const JsonObject& device) {
+    Serial.println("S_Devices::initBuzzer starting for device:");
+    serializeJson(device, Serial);
+    Serial.println();
+
+    buzzerConfig.pin = device["pin"] | "";
+    buzzerConfig.name = device["name"] | "Buzzer_Default";
+    int pin = getPin(buzzerConfig.pin);
+    buzzerInstance = new S_Buzzer(pin);
+    buzzerInstance->begin();
+
+    JsonArray triggers = device["triggers"].as<JsonArray>();
+    buzzerConfig.triggerCount = min(int(triggers.size()), 3);
+    for (int i = 0; i < buzzerConfig.triggerCount; i++) {
+        buzzerConfig.triggers[i].device = triggers[i]["device"] | "";
+        buzzerConfig.triggers[i].parameter = triggers[i]["parameter"] | "";
+        buzzerConfig.triggers[i].condition = triggers[i]["condition"] | "";
+        buzzerConfig.triggers[i].threshold = triggers[i]["threshold"] | 0.0;
+    }
+
+    Serial.println("S_Devices::initBuzzer completed on pin " + String(pin));
 }
 
 int S_Devices::getPin(const String& pinStr) {
@@ -171,7 +201,8 @@ DynamicJsonDocument S_Devices::getJsonSensorValuesForPublish() {
     if (mqInitialized && mqInstance != nullptr) {
         mqInstance->read();
         JsonObject mqValues = result.createNestedObject(mqConfig.name);
-        mqValues["gas"] = mqInstance->getValue();
+        mqValues["gas_raw"] = mqInstance->getRawValue();
+        mqValues["gas_ppm"] = mqInstance->getPPM();
     }
 
     return doc;
@@ -190,8 +221,42 @@ const String& S_Devices::getDeviceNameFromTopic(const String& topic) {
     return result;
 }
 
+void S_Devices::buzzerLoop() {
+    if (buzzerInitialized && buzzerInstance != nullptr) {
+        bool shouldBeActive = false;
+        for (int i = 0; i < buzzerConfig.triggerCount; i++) {
+            BuzzerTrigger& trigger = buzzerConfig.triggers[i];
+            float value = 0.0;
+
+            if (trigger.device == mqConfig.name && mqInstance != nullptr) {
+                if (trigger.parameter == "gas_ppm") value = mqInstance->getPPM();
+                else if (trigger.parameter == "gas_raw") value = mqInstance->getRawValue();
+            } else if (trigger.device == dhtConfig.name && dhtInstance != nullptr) {
+                if (trigger.parameter == "temperature") value = dhtInstance->getTemperature();
+                else if (trigger.parameter == "humidity") value = dhtInstance->getHumidity();
+            }
+
+            bool conditionMet = (trigger.condition == "above" && value > trigger.threshold) ||
+                                (trigger.condition == "below" && value < trigger.threshold);
+            if (conditionMet) {
+                shouldBeActive = true;
+                Serial.println("Buzzer trigger met: " + trigger.device + " " + trigger.parameter + " = " + String(value));
+                break;
+            }
+        }
+
+        if (shouldBeActive && !buzzerInstance->isActive()) {
+            buzzerInstance->on();
+        } else if (!shouldBeActive && buzzerInstance->isActive()) {
+            buzzerInstance->off();
+        }
+    }    
+}
+
 int S_Devices::loop() {
-    return relayInstance->loop();
+    int relayResult = relayInstance->loop();
+    buzzerLoop();
+    return relayResult;
 }
 
 DynamicJsonDocument S_Devices::getJsonAllValuesForPublish() {
