@@ -5,7 +5,7 @@
 #include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
-#include "S_JsonSettings.h" // Новый класс вместо S_Settings
+#include "S_JsonSettings.h"
 #include "S_FS.h"
 #include "S_Devices.h"
 #include "S_Common.h"
@@ -44,6 +44,7 @@ private:
 public:
     void init(PubSubClient* client, S_Devices* devices);
     void publish(bool force = false);
+    void publish(const String& topic, const String& payload); // Новая перегрузка
     void loop();
     String getSubscribeString();
     void connect();

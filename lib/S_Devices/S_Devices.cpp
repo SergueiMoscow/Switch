@@ -10,6 +10,7 @@ S_Devices::S_Devices() {
     dhtInitialized = false;
     mqInitialized = false;
     buzzerInitialized = false;
+    triggerCount = 0;
     setupModules();
 }
 
@@ -48,10 +49,23 @@ void S_Devices::setupModules() {
         } else if (type == "Buzzer" && !buzzerInitialized) {
             initBuzzer(device);
             buzzerInitialized = true;
+        } else if (type == "Relay") {
+            JsonArray triggersArray = device["triggers"];
+            for (JsonVariant v : triggersArray) {
+                if (triggerCount >= 8) break;
+                triggers[triggerCount].relayName = device["name"] | "";
+                triggers[triggerCount].device = v["device"] | "";
+                triggers[triggerCount].parameter = v["parameter"] | "";
+                triggers[triggerCount].condition = v["condition"] | "";
+                triggers[triggerCount].threshold = v["threshold"] | 0.0;
+                triggers[triggerCount].action = v["action"] | "";
+                triggers[triggerCount].active = v["active"] | true;
+                triggerCount++;
+            }
         }
     }
+    Serial.println("Initialized " + String(triggerCount) + " automation triggers");
 }
-
 
 void S_Devices::initDS18B20(const JsonObject& device) {
     Serial.println("S_Devices::initDS18B20 starting for device:");
@@ -99,7 +113,7 @@ void S_Devices::initMQ(const JsonObject& device) {
     int pin = getPin(mqConfig.pin);
     mqInstance = new S_MQ(pin);
     mqInstance->begin();
-    mqInstance->calibrate(); // Калибруем при старте
+    mqInstance->calibrate();
 
     Serial.println("S_Devices::initMQ completed on pin " + String(pin));
 }
@@ -250,7 +264,7 @@ void S_Devices::buzzerLoop() {
         } else if (!shouldBeActive && buzzerInstance->isActive()) {
             buzzerInstance->off();
         }
-    }    
+    }
 }
 
 int S_Devices::loop() {
@@ -278,4 +292,38 @@ DynamicJsonDocument S_Devices::getJsonAllValuesForPublish() {
     serializeJson(result, Serial);
     Serial.println();
     return doc;
+}
+
+int S_Devices::processAutomation(DynamicJsonDocument& sensorValues, DynamicJsonDocument& relayValues, void (*publish)(const String&, const String&)) {
+    int result = 0;
+    for (int i = 0; i < triggerCount; i++) {
+        if (!triggers[i].active) continue;
+
+        float value = sensorValues[triggers[i].device][triggers[i].parameter].as<float>();
+        if (isnan(value)) continue;
+
+        bool conditionMet = (triggers[i].condition == "above" && value > triggers[i].threshold) ||
+                            (triggers[i].condition == "below" && value < triggers[i].threshold);
+        if (!conditionMet) continue;
+
+        String currentState = relayValues[triggers[i].relayName].as<String>();
+        if (currentState == triggers[i].action) continue;
+
+        RelayConfig* relay = relayInstance->getRelayByName(triggers[i].relayName);
+        if (relay) {
+            int relayIdx = relayInstance->getRelayByPin(getPin(relay->pin));
+            if (relayIdx != -1) {
+                relayInstance->changeRelay(relayIdx, triggers[i].action, "automation");
+                result++;
+
+                if (publish) {
+                    String topic = "device/relay/" + triggers[i].relayName;
+                    String payload = triggers[i].action;
+                    publish(topic, payload);
+                    Serial.println("Automation: Published " + topic + " = " + payload);
+                }
+            }
+        }
+    }
+    return result;
 }

@@ -1,8 +1,17 @@
 #include "S_MQTT.h"
 
+// Статическая обёртка для передачи в processAutomation
+static S_MQTT* mqttInstance = nullptr;
+static void publishWrapper(const String& topic, const String& payload) {
+    if (mqttInstance) {
+        mqttInstance->publish(topic, payload);
+    }
+}
+
 void S_MQTT::init(PubSubClient* client, S_Devices* devicesPtr) {
     mqttClient = client;
     devices = devicesPtr;
+    mqttInstance = this; // Устанавливаем глобальный указатель
     Serial.println("S_MQTT.cpp: Initializing...");
     loadConfig();
 }
@@ -28,7 +37,7 @@ void S_MQTT::loadConfig() {
         Serial.printf("Found MQTT config: %s\n", kv.key().c_str());
         if (loadActiveConfig(settings)) {
             found = true;
-            break; // Используем первый активный конфиг
+            break;
         }
     }
 
@@ -44,10 +53,10 @@ void S_MQTT::loadConfig() {
 
 bool S_MQTT::loadActiveConfig(const JsonObject& obj) {
     Serial.println("loadActiveConfig: Raw JSON object: ");
-    serializeJson(obj, Serial); // Выводим весь объект в терминал
+    serializeJson(obj, Serial);
     Serial.println();
     Serial.print("Object Active: ");
-    Serial.println(obj["Active"].as <String>());
+    Serial.println(obj["Active"].as<String>());
 
     if (obj["Active"].as<int>() == 1) {
         activeConfig.server = obj["Server"] | "";
@@ -58,7 +67,7 @@ bool S_MQTT::loadActiveConfig(const JsonObject& obj) {
         activeConfig.active = true;
 
         if (activeConfig.periodSec < 10) {
-            activeConfig.periodSec = 10; // Минимальный период
+            activeConfig.periodSec = 10;
         }
         Serial.printf("Loaded active MQTT config: %s, Port: %d, Period: %d\n",
                       activeConfig.server.c_str(), activeConfig.port, activeConfig.periodSec);
@@ -147,6 +156,11 @@ void S_MQTT::setRootTopic() {
     Serial.println("Root topic set to: " + rootTopic);
 }
 
+void S_MQTT::publish(const String& topic, const String& payload) {
+    if (!mqttClient->connected()) return;
+    mqttClient->publish(topic.c_str(), payload.c_str(), true);
+}
+
 void S_MQTT::publish(bool force) {
     if (!mqttClient->connected() && !force) return;
 
@@ -195,6 +209,12 @@ void S_MQTT::loop() {
         S_Common::S_Common::getUTime();
         if (mqttClient->connected()) {
             Serial.println("S_MQTT.cpp loop publishing: " + S_Common::S_Common::getTime());
+            DynamicJsonDocument sensorValues = devices->getJsonSensorValuesForPublish();
+            DynamicJsonDocument relayValues = devices->getJsonRelayValuesForPublish();
+            int automationResult = devices->processAutomation(sensorValues, relayValues, publishWrapper);
+            if (automationResult > 0) {
+                Serial.println("Automation triggered " + String(automationResult) + " changes");
+            }
             publish(false);
             lastPublished = curMillis;
         }

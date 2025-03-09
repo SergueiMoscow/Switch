@@ -23,12 +23,12 @@ private:
     unsigned long relayTurnOff[MAX_RELAYS];
 
     int getPin(const String& pinStr);
-    int getRelayByPin(int pin);
-    RelayConfig* getRelayByName(const String& name);
     void setTimeToTurnOff(int relay, unsigned long sec, const RelayConfig& config);
 
 public:
     S_Relay();
+    int getRelayByPin(int pin);
+    RelayConfig* getRelayByName(const String& name);
     void initRelays(const JsonObject& configDoc);
     void changeRelay(int relay, const String& value, const String& caller);
     DynamicJsonDocument getJsonRelayValuesForPublish();

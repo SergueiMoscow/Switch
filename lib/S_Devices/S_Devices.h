@@ -9,7 +9,7 @@
 #include "S_Relay.h"
 #include "S_DHT.h"
 #include "S_MQ.h"
-#include "S_Buzzer.h" // Добавили новый класс
+#include "S_Buzzer.h"
 #include "S_JsonSettings.h"
 #include "S_Common.h"
 
@@ -46,8 +46,18 @@ struct BuzzerTrigger {
 struct BuzzerConfig {
     String pin;
     String name;
-    BuzzerTrigger triggers[3]; // Максимум 3 триггера
+    BuzzerTrigger triggers[3];
     int triggerCount;
+};
+
+struct AutomationTrigger {
+    String relayName;
+    String device;
+    String parameter;
+    String condition;
+    float threshold;
+    String action;
+    bool active;
 };
 
 class S_Devices {
@@ -56,11 +66,13 @@ private:
     S_Relay* relayInstance;
     S_DHT* dhtInstance;
     S_MQ* mqInstance;
-    S_Buzzer* buzzerInstance; // Добавили зуммер
+    S_Buzzer* buzzerInstance;
     DS18B20Config dsConfig;
     DHTConfig dhtConfig;
     MQConfig mqConfig;
     BuzzerConfig buzzerConfig;
+    AutomationTrigger triggers[8];
+    int triggerCount;
     bool dsInitialized;
     bool dhtInitialized;
     bool mqInitialized;
@@ -83,6 +95,7 @@ public:
     DynamicJsonDocument getJsonSensorValuesForPublish();
     void setupModules();
     DynamicJsonDocument getJsonAllValuesForPublish();
+    int processAutomation(DynamicJsonDocument& sensorValues, DynamicJsonDocument& relayValues, void (*publish)(const String&, const String&));
 };
 
 #endif
