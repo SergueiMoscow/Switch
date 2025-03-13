@@ -1,3 +1,6 @@
+#ifndef _S_WEB_
+#define _S_WEB_
+
 #include <Arduino.h>
 #include <ESP8266WebServer.h>
 #include <FS.h>
@@ -29,4 +32,9 @@ void webReset();
 void webUpdate();
 static String getBuildVersion();
 void handleFileUpload();
+void handleFileRead();
+
+private:
+    bool checkSecret()
 // };
+#endif

@@ -54,6 +54,7 @@ void webServerSetup()
   server.on("/style.css", webStyle);
   server.on("/update", webUpdate);
   server.on("/upload", HTTP_POST, replyOK, handleFileUpload);
+  server.on("/file", handleFileRead);
   server.begin();
   Serial.println("Web server started");
 } // end webServerStart function
@@ -492,4 +493,67 @@ void webUpdate() {
   }
   html += "</html>\r\n\r\n";
   server.send(200, "text/html", html);
+}
+
+void handleFileRead() {
+  if (!server.hasArg("path")) {
+      server.send(400, "text/plain", "Missing 'path' parameter");
+      return;
+  }
+
+  String filePath = server.arg("path");
+  if (!filePath.startsWith("/")) {
+      filePath = "/" + filePath; // Добавляем ведущий слэш, если его нет
+  }
+
+  S_FS fs;
+  if (!fs.exists(filePath.c_str())) {
+      server.send(404, "text/plain", "File not found: " + filePath);
+      return;
+  }
+
+  String fileContent = S_FS::readFile(filePath.c_str());
+  if (fileContent.length() == 0) {
+      server.send(500, "text/plain", "Failed to read file or file is empty: " + filePath);
+      return;
+  }
+
+  server.send(200, "text/plain", fileContent);
+  Serial.println("Served file content from: " + filePath);
+}
+
+
+bool checkSecret() {
+  S_FS fs;
+  
+  // Если файла secret.txt нет, доступ открыт
+  if (!fs.exists("/secret.txt")) {
+      Serial.println("No secret.txt found, access allowed");
+      return true;
+  }
+
+  // Читаем содержимое secret.txt
+  String secretFromFile = S_FS::readFile("/secret.txt");
+  if (secretFromFile.length() == 0) {
+      Serial.println("Failed to read secret.txt or file is empty");
+      server.send(500, "text/plain", "Internal error: secret.txt is empty");
+      return false;
+  }
+
+  // Проверяем заголовок secret
+  if (!server.hasHeader("secret")) {
+      Serial.println("Missing 'secret' header");
+      server.send(401, "text/plain", "Unauthorized: Missing secret header");
+      return false;
+  }
+
+  String secretFromHeader = server.header("secret");
+  if (secretFromHeader != secretFromFile) {
+      Serial.println("Secret mismatch: Header=" + secretFromHeader + ", File=" + secretFromFile);
+      server.send(401, "text/plain", "Unauthorized: Invalid secret");
+      return false;
+  }
+
+  Serial.println("Secret matched, access granted");
+  return true;
 }

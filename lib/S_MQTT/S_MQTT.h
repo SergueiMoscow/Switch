@@ -1,6 +1,8 @@
 #ifndef _S_MQTT_
 #define _S_MQTT_
 
+#define MQTT_MAX_PACKET_SIZE 4096
+
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
@@ -49,6 +51,7 @@ public:
     String getSubscribeString();
     void connect();
     bool sendTimeRequest();
+    void publishStartupInfo();
 };
 
 #endif

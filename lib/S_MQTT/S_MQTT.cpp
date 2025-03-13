@@ -135,6 +135,7 @@ void S_MQTT::connect() {
             String subscribeString = getSubscribeString();
             Serial.println("Subscribing to: " + subscribeString);
             mqttClient->subscribe(subscribeString.c_str());
+            publishStartupInfo();
             isConfigured = true;
         } else {
             Serial.printf("Failed to connect to MQTT, state: %d\n", mqttClient->state());
@@ -229,4 +230,105 @@ bool S_MQTT::sendTimeRequest() {
     String publishTopic = rootTopic + "gettime";
     mqttClient->publish(publishTopic.c_str(), "", false);
     return now() > getBuildUnixTime();
+}
+
+
+// void S_MQTT::publishStartupInfo() {
+//     if (!mqttClient->connected()) {
+//         Serial.println("MQTT not connected, skipping publishStartupInfo");
+//         return;
+//     }
+
+//     // Читаем devices.json с помощью S_FS
+//     S_FS fs;
+//     size_t devicesFileSize = 0;
+//     if (fs.exists("/devices.json")) {
+//         File file = LittleFS.open("/devices.json", "r");
+//         if (file) {
+//             devicesFileSize = file.size();
+//             file.close();
+//         } else {
+//             Serial.println("Failed to open devices.json to get size");
+//         }
+//     } else {
+//         Serial.println("devices.json not found, using default size");
+//     }
+
+//     // Рассчитываем размер DynamicJsonDocument: размер файла + запас для IP, topic и метаданных
+//     size_t docSize = devicesFileSize + 2048; // 1024 — запас на "IP", "topic" и накладные расходы JSON
+//     DynamicJsonDocument doc(docSize);
+//     JsonObject root = doc.to<JsonObject>();
+
+//     // Добавляем IP-адрес
+//     root["IP"] = WiFi.localIP().toString();
+
+//     // Добавляем rootTopic
+//     root["topic"] = rootTopic;
+
+//     // Загружаем devices.json
+//     if (devicesFileSize > 0) {
+//         DynamicJsonDocument devicesDoc = S_FS::readJsonFileDynamic("/devices.json");
+//         if (!devicesDoc.isNull()) {
+//             root["devices"] = devicesDoc.as<JsonObject>();
+//             Serial.println("Successfully loaded devices.json for startup info");
+//         } else {
+//             Serial.println("Failed to parse devices.json for startup info");
+//             root["devices"] = JsonObject(); // Пустой объект в случае ошибки
+//         }
+//     } else {
+//         Serial.println("No devices.json data available");
+//         root["devices"] = JsonObject(); // Пустой объект, если файла нет или он пустой
+//     }
+//     root["online"] = millis() % 1000;
+    
+//     // Сериализуем JSON в строку
+//     String payload;
+//     serializeJson(root, payload);
+
+//     // Отправляем в топик
+//     String startupTopic = rootTopic + "startup";
+//     Serial.println("Publishing startup info to: " + startupTopic);
+//     Serial.println("Payload: " + payload);
+//     publish(startupTopic.c_str(), payload.c_str());
+// }
+
+void S_MQTT::publishStartupInfo() {
+    if (!mqttClient->connected()) {
+        Serial.println("MQTT not connected, skipping publishStartupInfo");
+        return;
+    }
+    String devicesFile = "/devices.json";
+    // Отправляем базовую информацию
+    DynamicJsonDocument basicDoc(256); // Маленький буфер для базовых данных
+    JsonObject basicRoot = basicDoc.to<JsonObject>();
+    basicRoot["IP"] = WiFi.localIP().toString();
+    basicRoot["topic"] = rootTopic;
+    basicRoot["online"] = millis() % 1000;
+
+    String basicPayload;
+    serializeJson(basicRoot, basicPayload);
+    String startupTopic = rootTopic + "startup";
+    Serial.println("Publishing basic info to: " + startupTopic);
+    Serial.println("Payload: " + basicPayload);
+    mqttClient->publish(startupTopic.c_str(), basicPayload.c_str(), true);
+
+    S_FS fs;
+    // Отправляем devices отдельно
+    if (fs.exists(devicesFile.c_str())) {
+        File file = LittleFS.open(devicesFile, "r");
+        if (file) {
+            size_t devicesFileSize = file.size();
+            file.close();
+
+            DynamicJsonDocument devicesDoc = S_FS::readJsonFileDynamic(devicesFile.c_str());
+            if (!devicesDoc.isNull()) {
+                String devicesPayload;
+                serializeJson(devicesDoc, devicesPayload);
+                String devicesTopic = rootTopic + "startup/devices";
+                Serial.println("Publishing devices to: " + devicesTopic);
+                Serial.println("Payload: " + devicesPayload);
+                mqttClient->publish(devicesTopic.c_str(), devicesPayload.c_str(), true);
+            }
+        }
+    }
 }
