@@ -3,59 +3,32 @@
         "type": "Relay",
         "pin": "D6",
         "name": "Bedroom",
-        "description": "WarmFloor bedroom",
         "on": "LOW",
-        "max_on": 50,
-        "automation1": {
-            "type": "time",
-            "timeon": "22:00",
-            "timeoff": "23:00",
-            "action": "off"
-        },
-        "automation2": {
-            "type": "temperature",
-            "device": "device3",
-            "max": 23,
-            "min": 18,
-            "action": "on"
-        }
+        "max_on": 0,
+        "triggers": [
+            {"device": "FloorSensors", "parameter": "Bedroom", "condition": "below", "threshold": 20, "action": "on", "active": 1},
+            {"device": "FloorSensors", "parameter": "Bedroom", "condition": "above", "threshold": 25, "action": "off", "active": 1},
+            {"device": "RoomClimate", "parameter": "temperature", "condition": "below", "threshold": 18, "action": "on", "active": 0}
+        ]
     },
     "device2": {
         "type": "Relay",
         "pin": "D7",
         "name": "Passage",
-        "description": "WarmFloor passage",
         "on": "LOW",
-        "max_on": 50,
-        "automation1": {
-            "type": "time",
-            "timeon": "22:00",
-            "timeoff": "23:00",
-            "action": "off"
-        },
-        "automation2": {
-            "type": "temperature",
-            "device": "DS_Passage",
-            "max": 23,
-            "min": 18,
-            "action": "on"
-        }
+        "max_on": 0,
+        "triggers": [
+            {"device": "FloorSensors", "parameter": "Passage", "condition": "below", "threshold": 20, "action": "on", "active": 1},
+            {"device": "FloorSensors", "parameter": "Passage", "condition": "above", "threshold": 25, "action": "off", "active": 1}
+        ]
     },
-
-
     "device3": {
         "type": "DS18B20",
-        "pin": "D2",
-        "sensors": 
-        [
-          {
-            "name": "Bedroom",
-            "description":"У кровати"
-          },
-          {
-            "name": "Passage",
-            "description":"в коридоре"
-          }
+        "pin": "D5",
+        "name": "FloorSensors",
+        "sensors": [
+            {"name": "Bedroom", "description": "Bedroom floor temp"},
+            {"name": "Passage", "description": "Passage floor temp"}
         ]
     },
     "device4": {
