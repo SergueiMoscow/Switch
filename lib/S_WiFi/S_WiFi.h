@@ -1,3 +1,6 @@
+#ifndef _S_WIFI_
+#define _S_WIFI_
+
 #include <Arduino.h>
 #include "S_Mode.h"
 
@@ -18,3 +21,4 @@ public:
   bool accessPoint();
   bool isSSID(String);
 };
+#endif

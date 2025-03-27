@@ -76,6 +76,65 @@ bool S_MQTT::loadActiveConfig(const JsonObject& obj) {
     return false;
 }
 
+void sendFileToServer(const String& url, const String& secretKey, const String& topic, const String& filename) {
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi not connected, cannot send file");
+        return;
+    }
+
+    HTTPClient http;
+    WiFiClient client;
+
+    // Настраиваем POST-запрос
+    http.begin(client, url);
+    http.addHeader("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW");
+
+    // Формируем тело multipart/form-data
+    String boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW";
+    String body = "";
+
+    // Поле topic
+    body += "--" + boundary + "\r\n";
+    body += "Content-Disposition: form-data; name=\"topic\"\r\n\r\n";
+    body += topic + "\r\n";
+
+    // Поле secret_key
+    body += "--" + boundary + "\r\n";
+    body += "Content-Disposition: form-data; name=\"secret_key\"\r\n\r\n";
+    body += secretKey + "\r\n";
+
+    // Поле file
+    body += "--" + boundary + "\r\n";
+    body += "Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\"\r\n";
+    body += "Content-Type: application/json\r\n\r\n";
+
+    // Читаем файл devices.json из SPIFFS
+    // File file = SPIFFS.open("/" + filename, "r");
+    // if (!file) {
+    //     Serial.println("Failed to open file: " + filename);
+    //     http.end();
+    //     return;
+    // }
+
+    // Добавляем содержимое файла в тело запроса
+    String fileContent = S_FS::readFile(filename.c_str());
+    // file.close();
+    body += fileContent + "\r\n";
+    body += "--" + boundary + "--\r\n";
+
+    // Отправляем запрос
+    int httpCode = http.POST(body);
+    if (httpCode > 0) {
+        String response = http.getString();
+        Serial.println("HTTP Response code: " + String(httpCode));
+        Serial.println("Response: " + response);
+    } else {
+        Serial.println("HTTP POST failed, error: " + String(http.errorToString(httpCode)));
+    }
+
+    http.end();
+}
+
 void callback(char* topic, byte* msg, unsigned int len) {
     extern S_Devices devices;
     extern S_MQTT sMQTT;
@@ -101,6 +160,25 @@ void callback(char* topic, byte* msg, unsigned int len) {
         } else {
             Serial.println("Failed to parse time JSON or no unixtime field");
         }
+    } else if (topicStr.endsWith("/set/sendFile")) {
+        DynamicJsonDocument doc(1024);
+        DeserializationError error = deserializeJson(doc, message);
+        if (error) {
+            Serial.println("Failed to parse sendFile JSON: " + String(error.c_str()));
+            return;
+        }
+
+        String filename = doc["filename"] | "";
+        String url = doc["url"] | "";
+        String secretKey = doc["secret_key"] | "";
+
+        if (filename.isEmpty() || url.isEmpty() || secretKey.isEmpty()) {
+            Serial.println("Invalid sendFile message: missing filename, url, or secret_key");
+            return;
+        }
+
+        Serial.println("Sending file " + filename + " to " + url + " with secret_key: " + secretKey);
+        sendFileToServer(url, secretKey, topicStr.substring(0, topicStr.lastIndexOf("/set/sendFile")), filename);
     } else {
         devices.callback(topicStr, message);
         sMQTT.publish(false);

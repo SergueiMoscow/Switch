@@ -14,11 +14,7 @@
 #include "S_OTA.h"
 #include <SPI.h>
 
-// class S_Web
-// {
-//     private:
-//        ESP8266WebServer server;
-// public:
+extern ESP8266WebServer server;
 void webServerSetup();
 void webServerLoop();
 void webFSBrowser();
@@ -30,11 +26,8 @@ String webMenu(String current);
 void test();
 void webReset();
 void webUpdate();
-static String getBuildVersion();
 void handleFileUpload();
 void handleFileRead();
 
-private:
-    bool checkSecret()
-// };
+bool checkSecret();
 #endif

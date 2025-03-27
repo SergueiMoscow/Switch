@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include "S_Web.h"
 
 ESP8266WebServer server(80);
