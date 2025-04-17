@@ -194,4 +194,29 @@ namespace S_Common
         return host;
     }
 
+    int getPin(const String& pinStr) {
+        if (pinStr.startsWith("D")) {
+            if (pinStr == "D0") return D0;
+            if (pinStr == "D1") return D1;
+            if (pinStr == "D2") return D2;
+            if (pinStr == "D3") return D3;
+            if (pinStr == "D4") return D4;
+            if (pinStr == "D5") return D5;
+            if (pinStr == "D6") return D6;
+            if (pinStr == "D7") return D7;
+            if (pinStr == "D8") return D8;
+            if (pinStr == "D9") return D9;
+            if (pinStr == "D10") return D10;
+            if (pinStr == "D11") return D11;
+            if (pinStr == "D12") return D12;
+            if (pinStr == "D13") return D13;
+            if (pinStr == "D14") return D14;
+            if (pinStr == "D15") return D15;
+        } else if (pinStr == "A0") {
+            return A0;
+        }
+        return atoi(pinStr.c_str());
+    }
+    
+
 }

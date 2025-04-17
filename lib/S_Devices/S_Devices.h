@@ -87,7 +87,7 @@ private:
 
 public:
     S_Devices();
-    int getPin(const String& pinStr);
+    // int getPin(const String& pinStr);
     float getTemperature(const String& deviceName, const String& sensorName);
     DynamicJsonDocument getJsonRelayValuesForPublish();
     void callback(const String& topic, const String& value);

@@ -74,7 +74,7 @@ void S_Devices::initDS18B20(const JsonObject& device) {
 
     dsConfig.pin = device["pin"] | "";
     dsConfig.name = device["name"] | "DS18B20_Default";
-    int pin = getPin(dsConfig.pin);
+    int pin = S_Common::getPin(dsConfig.pin);
     dsInstance = &S_DS::getInstance(pin);
 
     JsonArray sensors = device["sensors"].as<JsonArray>();
@@ -95,7 +95,7 @@ void S_Devices::initDHT(const JsonObject& device) {
     dhtConfig.pin = device["pin"] | "";
     dhtConfig.name = device["name"] | "DHT_Default";
     dhtConfig.description = device["description"] | "";
-    int pin = getPin(dhtConfig.pin);
+    int pin = S_Common::getPin(dhtConfig.pin);
     dhtInstance = new S_DHT(pin, DHT22);
     dhtInstance->begin();
 
@@ -110,7 +110,7 @@ void S_Devices::initMQ(const JsonObject& device) {
     mqConfig.pin = device["pin"] | "";
     mqConfig.name = device["name"] | "MQ_Default";
     mqConfig.description = device["description"] | "";
-    int pin = getPin(mqConfig.pin);
+    int pin = S_Common::getPin(mqConfig.pin);
     mqInstance = new S_MQ(pin);
     mqInstance->begin();
     mqInstance->calibrate();
@@ -125,7 +125,7 @@ void S_Devices::initBuzzer(const JsonObject& device) {
 
     buzzerConfig.pin = device["pin"] | "";
     buzzerConfig.name = device["name"] | "Buzzer_Default";
-    int pin = getPin(buzzerConfig.pin);
+    int pin = S_Common::getPin(buzzerConfig.pin);
     buzzerInstance = new S_Buzzer(pin);
     buzzerInstance->begin();
 
@@ -141,29 +141,29 @@ void S_Devices::initBuzzer(const JsonObject& device) {
     Serial.println("S_Devices::initBuzzer completed on pin " + String(pin));
 }
 
-int S_Devices::getPin(const String& pinStr) {
-    if (pinStr.startsWith("D")) {
-        if (pinStr == "D0") return D0;
-        if (pinStr == "D1") return D1;
-        if (pinStr == "D2") return D2;
-        if (pinStr == "D3") return D3;
-        if (pinStr == "D4") return D4;
-        if (pinStr == "D5") return D5;
-        if (pinStr == "D6") return D6;
-        if (pinStr == "D7") return D7;
-        if (pinStr == "D8") return D8;
-        if (pinStr == "D9") return D9;
-        if (pinStr == "D10") return D10;
-        if (pinStr == "D11") return D11;
-        if (pinStr == "D12") return D12;
-        if (pinStr == "D13") return D13;
-        if (pinStr == "D14") return D14;
-        if (pinStr == "D15") return D15;
-    } else if (pinStr == "A0") {
-        return A0;
-    }
-    return atoi(pinStr.c_str());
-}
+// int S_Devices::getPin(const String& pinStr) {
+//     if (pinStr.startsWith("D")) {
+//         if (pinStr == "D0") return D0;
+//         if (pinStr == "D1") return D1;
+//         if (pinStr == "D2") return D2;
+//         if (pinStr == "D3") return D3;
+//         if (pinStr == "D4") return D4;
+//         if (pinStr == "D5") return D5;
+//         if (pinStr == "D6") return D6;
+//         if (pinStr == "D7") return D7;
+//         if (pinStr == "D8") return D8;
+//         if (pinStr == "D9") return D9;
+//         if (pinStr == "D10") return D10;
+//         if (pinStr == "D11") return D11;
+//         if (pinStr == "D12") return D12;
+//         if (pinStr == "D13") return D13;
+//         if (pinStr == "D14") return D14;
+//         if (pinStr == "D15") return D15;
+//     } else if (pinStr == "A0") {
+//         return A0;
+//     }
+//     return atoi(pinStr.c_str());
+// }
 
 float S_Devices::getTemperature(const String& deviceName, const String& sensorName) {
     if (dsInitialized && dsInstance != nullptr && deviceName == dsConfig.name) {
@@ -311,7 +311,7 @@ int S_Devices::processAutomation(DynamicJsonDocument& sensorValues, DynamicJsonD
 
         RelayConfig* relay = relayInstance->getRelayByName(triggers[i].relayName);
         if (relay) {
-            int relayIdx = relayInstance->getRelayByPin(getPin(relay->pin));
+            int relayIdx = relayInstance->getRelayByPin(S_Common::getPin(relay->pin));
             if (relayIdx != -1) {
                 relayInstance->changeRelay(relayIdx, triggers[i].action, "automation");
                 result++;

@@ -22,7 +22,7 @@ private:
     unsigned long relayTurnedOn[MAX_RELAYS];
     unsigned long relayTurnOff[MAX_RELAYS];
 
-    int getPin(const String& pinStr);
+    // int getPin(const String& pinStr);
     void setTimeToTurnOff(int relay, unsigned long sec, const RelayConfig& config);
 
 public:

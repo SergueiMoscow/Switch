@@ -37,5 +37,6 @@ namespace S_Common
         static String generate_uuid_v4();
         static String extractHost(const String& url);
     };
+    int getPin(const String& pinStr);
 }
 #endif
