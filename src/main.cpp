@@ -28,12 +28,11 @@ int loopCounter = 0;
 
 void setup()
 {
-  Serial.begin(57200);
-  Serial.println("Begin setup");
+  // Serial.begin(57200);
+  Serial.begin(74880);
+  
   LittleFS.begin();
   S_Mode::begin();
-  // S_Mode::setNormalMode("Ok");
-  // delay(10000);
   Serial.println("main.cpp. Trying to setup wifi");
   sWiFi.connect();
   Serial.println("main.cpp. Wifi connected, trying to setup web server");

@@ -10,61 +10,75 @@ S_Devices::S_Devices() {
     dhtInitialized = false;
     mqInitialized = false;
     buzzerInitialized = false;
+    tariffInstance = new S_Tariff(relayInstance);
     triggerCount = 0;
     setupModules();
 }
 
 void S_Devices::setupModules() {
     S_FS fs;
-    if (!fs.exists("/devices.json")) {
+    if (fs.exists("/devices.json")) {
+
+        DynamicJsonDocument doc = S_FS::readJsonFileDynamic("/devices.json");
+        if (doc.isNull()) {
+            Serial.println("Error: Failed to parse devices.json");
+            return;
+        }
+
+        Serial.println("Devices config parsed:");
+        serializeJson(doc, Serial);
+        Serial.println();
+
+        JsonObject configObj = doc.as<JsonObject>();
+        relayInstance->initRelays(configObj);
+
+        for (JsonPair kv : configObj) {
+            JsonObject device = kv.value().as<JsonObject>();
+            String type = device["type"] | "";
+            if (type == "DS18B20" && !dsInitialized) {
+                initDS18B20(device);
+                dsInitialized = true;
+            } else if (type == "DHT" && !dhtInitialized) {
+                initDHT(device);
+                dhtInitialized = true;
+            } else if (type == "MQ" && !mqInitialized) {
+                initMQ(device);
+                mqInitialized = true;
+            } else if (type == "Buzzer" && !buzzerInitialized) {
+                initBuzzer(device);
+                buzzerInitialized = true;
+            } else if (type == "Relay") {
+                JsonArray triggersArray = device["triggers"];
+                for (JsonVariant v : triggersArray) {
+                    if (triggerCount >= 8) break;
+                    triggers[triggerCount].relayName = device["name"] | "";
+                    triggers[triggerCount].device = v["device"] | "";
+                    triggers[triggerCount].parameter = v["parameter"] | "";
+                    triggers[triggerCount].condition = v["condition"] | "";
+                    triggers[triggerCount].threshold = v["threshold"] | 0.0;
+                    triggers[triggerCount].action = v["action"] | "";
+                    triggers[triggerCount].active = v["active"] | true;
+                    triggerCount++;
+                }
+            }
+        }
+        Serial.println("Initialized " + String(triggerCount) + " automation triggers");
+    } else {
         S_Mode::setConfigMQTTMode("No devices.json found");
         return;
     }
-
-    DynamicJsonDocument doc = S_FS::readJsonFileDynamic("/devices.json");
-    if (doc.isNull()) {
-        Serial.println("Error: Failed to parse devices.json");
-        return;
-    }
-
-    Serial.println("Devices config parsed:");
-    serializeJson(doc, Serial);
-    Serial.println();
-
-    JsonObject configObj = doc.as<JsonObject>();
-    relayInstance->initRelays(configObj);
-
-    for (JsonPair kv : configObj) {
-        JsonObject device = kv.value().as<JsonObject>();
-        String type = device["type"] | "";
-        if (type == "DS18B20" && !dsInitialized) {
-            initDS18B20(device);
-            dsInitialized = true;
-        } else if (type == "DHT" && !dhtInitialized) {
-            initDHT(device);
-            dhtInitialized = true;
-        } else if (type == "MQ" && !mqInitialized) {
-            initMQ(device);
-            mqInitialized = true;
-        } else if (type == "Buzzer" && !buzzerInitialized) {
-            initBuzzer(device);
-            buzzerInitialized = true;
-        } else if (type == "Relay") {
-            JsonArray triggersArray = device["triggers"];
-            for (JsonVariant v : triggersArray) {
-                if (triggerCount >= 8) break;
-                triggers[triggerCount].relayName = device["name"] | "";
-                triggers[triggerCount].device = v["device"] | "";
-                triggers[triggerCount].parameter = v["parameter"] | "";
-                triggers[triggerCount].condition = v["condition"] | "";
-                triggers[triggerCount].threshold = v["threshold"] | 0.0;
-                triggers[triggerCount].action = v["action"] | "";
-                triggers[triggerCount].active = v["active"] | true;
-                triggerCount++;
-            }
+    if (fs.exists("/tariffs.json")) {
+        DynamicJsonDocument tariffDoc = S_FS::readJsonFileDynamic("/tariffs.json");
+        if (!tariffDoc.isNull()) {
+            Serial.println("Tariffs config parsed:");
+            serializeJson(tariffDoc, Serial);
+            Serial.println();
+            tariffInstance->setup(tariffDoc.as<JsonObject>());
+        } else {
+            Serial.println("Error: Failed to parse tariffs.json");
         }
     }
-    Serial.println("Initialized " + String(triggerCount) + " automation triggers");
+
 }
 
 void S_Devices::initDS18B20(const JsonObject& device) {
@@ -140,30 +154,6 @@ void S_Devices::initBuzzer(const JsonObject& device) {
 
     Serial.println("S_Devices::initBuzzer completed on pin " + String(pin));
 }
-
-// int S_Devices::getPin(const String& pinStr) {
-//     if (pinStr.startsWith("D")) {
-//         if (pinStr == "D0") return D0;
-//         if (pinStr == "D1") return D1;
-//         if (pinStr == "D2") return D2;
-//         if (pinStr == "D3") return D3;
-//         if (pinStr == "D4") return D4;
-//         if (pinStr == "D5") return D5;
-//         if (pinStr == "D6") return D6;
-//         if (pinStr == "D7") return D7;
-//         if (pinStr == "D8") return D8;
-//         if (pinStr == "D9") return D9;
-//         if (pinStr == "D10") return D10;
-//         if (pinStr == "D11") return D11;
-//         if (pinStr == "D12") return D12;
-//         if (pinStr == "D13") return D13;
-//         if (pinStr == "D14") return D14;
-//         if (pinStr == "D15") return D15;
-//     } else if (pinStr == "A0") {
-//         return A0;
-//     }
-//     return atoi(pinStr.c_str());
-// }
 
 float S_Devices::getTemperature(const String& deviceName, const String& sensorName) {
     if (dsInitialized && dsInstance != nullptr && deviceName == dsConfig.name) {
@@ -270,6 +260,7 @@ void S_Devices::buzzerLoop() {
 int S_Devices::loop() {
     int relayResult = relayInstance->loop();
     buzzerLoop();
+    tariffInstance->loop();
     return relayResult;
 }
 

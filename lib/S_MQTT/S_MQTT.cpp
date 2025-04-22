@@ -332,21 +332,23 @@ void S_MQTT::publishStartupInfo() {
 
     S_FS fs;
     // Отправляем devices отдельно
-    if (fs.exists(devicesFile.c_str())) {
-        File file = LittleFS.open(devicesFile, "r");
-        if (file) {
-            size_t devicesFileSize = file.size();
-            file.close();
+    // Не отправляем, т.к. может быть слишком большой для MQTT, будем отправлять по HTTP
+    // Но могут быть проблемы, если плата за NAT.
+    // if (fs.exists(devicesFile.c_str())) {
+    //     File file = LittleFS.open(devicesFile, "r");
+    //     if (file) {
+    //         size_t devicesFileSize = file.size();
+    //         file.close();
 
-            DynamicJsonDocument devicesDoc = S_FS::readJsonFileDynamic(devicesFile.c_str());
-            if (!devicesDoc.isNull()) {
-                String devicesPayload;
-                serializeJson(devicesDoc, devicesPayload);
-                String devicesTopic = rootTopic + "startup/devices";
-                Serial.println("Publishing devices to: " + devicesTopic);
-                Serial.println("Payload: " + devicesPayload);
-                mqttClient->publish(devicesTopic.c_str(), devicesPayload.c_str(), true);
-            }
-        }
-    }
+    //         DynamicJsonDocument devicesDoc = S_FS::readJsonFileDynamic(devicesFile.c_str());
+    //         if (!devicesDoc.isNull()) {
+    //             String devicesPayload;
+    //             serializeJson(devicesDoc, devicesPayload);
+    //             String devicesTopic = rootTopic + "startup/devices";
+    //             Serial.println("Publishing devices to: " + devicesTopic);
+    //             Serial.println("Payload: " + devicesPayload);
+    //             mqttClient->publish(devicesTopic.c_str(), devicesPayload.c_str(), true);
+    //         }
+    //     }
+    // }
 }

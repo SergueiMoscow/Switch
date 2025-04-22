@@ -12,6 +12,7 @@
 #include "S_Buzzer.h"
 #include "S_JsonSettings.h"
 #include "S_Common.h"
+#include "S_Tariff.h"
 
 struct DS18B20Config {
     String pin;
@@ -67,6 +68,7 @@ private:
     S_DHT* dhtInstance;
     S_MQ* mqInstance;
     S_Buzzer* buzzerInstance;
+    S_Tariff* tariffInstance;
     DS18B20Config dsConfig;
     DHTConfig dhtConfig;
     MQConfig mqConfig;

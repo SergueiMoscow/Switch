@@ -7,3 +7,6 @@ sss.env
 MySettings/
 readme.sss
 .qodo
+.venv
+LoadFilesToBoard/
+.idea/

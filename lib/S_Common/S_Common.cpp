@@ -82,7 +82,7 @@ namespace S_Common
         String host = extractHost(url);
         http.addHeader("Host", host);
         http.addHeader("User-Agent", "X-Device");
-        Serial.print("added header: Host: " + host + " User-Agent: X-Device");
+        // Serial.print("added header: Host: " + host + " User-Agent: X-Device");
 
         String playload = "0";
         Serial.print("GetUrl: " + url + " (header: Host " + host + "): " );
