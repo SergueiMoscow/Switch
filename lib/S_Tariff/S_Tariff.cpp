@@ -11,7 +11,7 @@ void S_Tariff::setup(const JsonObject& config) {
     Serial.println("S_Tariff::setup starting");
 
     JsonArray tariffArray = config["Tariffs"].as<JsonArray>();
-    tariffCount = min((int)tariffArray.size(), 3); // Ограничиваем до 3 тарифов
+    tariffCount = min((int)tariffArray.size(), 3);
     Serial.println("Tariff setup point 1");
     for (int i = 0; i < tariffCount; i++) {
         JsonObject tariffObj = tariffArray[i];
@@ -33,7 +33,6 @@ void S_Tariff::setup(const JsonObject& config) {
 }
 
 void S_Tariff::initRelays(const JsonObject& config) {
-    // Ничего не делаем, так как реле инициализируются через S_Relay
     Serial.println("S_Tariff::initRelays: Relays managed by S_Relay");
 }
 
@@ -43,8 +42,31 @@ bool S_Tariff::isTimeInPeriod(const String& period, unsigned long currentTime) {
 
     time_t now = currentTime;
     struct tm* timeinfo = localtime(&now);
-    int currentHour = timeinfo->tm_hour;
-    bool inPeriod = currentHour >= startHour && currentHour < endHour;
+    int utcHour = timeinfo->tm_hour;
+    long utcOffsetSeconds = S_Common::S_Common::utcOffset;
+    int localHour = (utcHour + (utcOffsetSeconds / 3600)) % 24;
+
+    if (localHour < 0) localHour += 24;
+
+    bool inPeriod;
+    if (endHour <= startHour) {
+        // Период переходит через полночь (например, 23-7)
+        inPeriod = (localHour >= startHour || localHour < endHour);
+    } else {
+        // Обычный период (например, 7-10)
+        inPeriod = (localHour >= startHour && localHour < endHour);
+    }
+
+    Serial.print("UTC Hour: ");
+    Serial.print(utcHour);
+    Serial.print(", Offset: ");
+    Serial.print(utcOffsetSeconds / 3600);
+    Serial.print("h, Local Hour: ");
+    Serial.print(localHour);
+    Serial.print(", Period: ");
+    Serial.print(period);
+    Serial.print(", In Period: ");
+    Serial.println(inPeriod ? "1" : "0");
     return inPeriod;
 }
 
@@ -54,6 +76,7 @@ void S_Tariff::loop() {
     unsigned long currentTime = S_Common::S_Common::getUTime();
     int newTariffIdx = -1;
 
+    Serial.println("Checking tariffs, count: " + String(tariffCount));
     for (int i = 0; i < tariffCount; i++) {
         for (int j = 0; j < tariffs[i].periodCount; j++) {
             if (isTimeInPeriod(tariffs[i].periods[j], currentTime)) {
@@ -67,7 +90,6 @@ void S_Tariff::loop() {
     if (newTariffIdx != currentTariffIdx && newTariffIdx != -1) {
         Serial.println("Switching to tariff: " + tariffs[newTariffIdx].name);
 
-        // Сначала включаем новое реле
         RelayConfig* newRelay = relayInstance->getRelayByName(tariffs[newTariffIdx].name);
         if (newRelay != nullptr) {
             int newRelayIdx = relayInstance->getRelayByPin(S_Common::getPin(newRelay->pin));
@@ -80,7 +102,6 @@ void S_Tariff::loop() {
             Serial.println("Error: Relay " + tariffs[newTariffIdx].name + " not found");
         }
 
-        // Затем выключаем остальные
         for (int i = 0; i < tariffCount; i++) {
             if (i != newTariffIdx) {
                 RelayConfig* relay = relayInstance->getRelayByName(tariffs[i].name);

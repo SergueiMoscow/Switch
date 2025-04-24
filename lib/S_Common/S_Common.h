@@ -27,6 +27,7 @@ namespace S_Common
     {
         private:
         static String deleteQuotes(String);
+        
         public:
         static String getURL(String url);
         static void setUTime();
@@ -36,7 +37,10 @@ namespace S_Common
         static String getTime();
         static String generate_uuid_v4();
         static String extractHost(const String& url);
+        static long utcOffset;
     };
     int getPin(const String& pinStr);
+    static long parseUtcOffset(const String& offsetStr);
+
 }
 #endif

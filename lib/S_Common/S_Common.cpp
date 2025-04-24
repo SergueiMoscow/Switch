@@ -4,6 +4,7 @@
 
 namespace S_Common
 {
+    long S_Common::utcOffset = 0; // Инициализация utc_offset
 
     void S_Common::setUTime()
     {
@@ -11,6 +12,9 @@ namespace S_Common
         timeSettings.setSettingsFile("time.json");
         String local = timeSettings.getSetting("local", "");
         String remote = timeSettings.getSetting("remote", "");
+        String utcOffsetStr = timeSettings.getSetting("utc_offset", "+03:00"); // По умолчанию Moscow
+        // Устанавливаем utcOffset из time.json
+        utcOffset = parseUtcOffset(utcOffsetStr);
         if (remote != "")
         {
             Serial.println("Common: Remote time server: " + remote);
@@ -216,6 +220,27 @@ namespace S_Common
             return A0;
         }
         return atoi(pinStr.c_str());
+    }
+    
+    static long parseUtcOffset(const String& offsetStr) {
+        if (offsetStr.length() < 6) { // Минимальная длина "+00:00"
+            Serial.println("Error: Invalid utc_offset format: " + offsetStr);
+            return 0;
+        }
+    
+        // Извлекаем знак, часы и минуты
+        char sign = offsetStr[0]; // '+' или '-'
+        int hours = offsetStr.substring(1, 3).toInt();
+        int minutes = offsetStr.substring(4, 6).toInt();
+    
+        // Преобразуем в секунды
+        long seconds = (hours * 3600) + (minutes * 60);
+        if (sign == '-') {
+            seconds = -seconds;
+        }
+    
+        Serial.println("Parsed utc_offset: " + offsetStr + " -> " + String(seconds) + " seconds");
+        return seconds;
     }
     
 

@@ -30,7 +30,6 @@ void setup()
 {
   // Serial.begin(57200);
   Serial.begin(74880);
-  
   LittleFS.begin();
   S_Mode::begin();
   Serial.println("main.cpp. Trying to setup wifi");
