@@ -49,6 +49,7 @@ void setup()
 
 void loop()
 {
+  unsigned long currentMillis = millis();
   webServerLoop();
   sWiFi.WiFiLoop();
   DeviceMode currentMode = S_Mode::getCurrentMode();
@@ -60,6 +61,8 @@ void loop()
     {sMQTT.loop();}
   if (currentMode == MODE_NORMAL)
     {S_OTA::loop();}
+  if (currentMode > MODE_CONFIG_WIFI)
+    {S_Common::commonLoop();}
   delay(500);
   loopCounter ++;
 }

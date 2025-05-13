@@ -242,6 +242,33 @@ namespace S_Common
         Serial.println("Parsed utc_offset: " + offsetStr + " -> " + String(seconds) + " seconds");
         return seconds;
     }
-    
 
+    void commonLoop() {
+        static unsigned long lastTimeSync = 0;
+        static unsigned long lastAttempt = 0;
+        const unsigned long syncInterval = 24UL * 60 * 60 * 1000; // 24 часа
+        const unsigned long retryInterval = 1UL * 60 * 60 * 1000; // 1 час для повтора
+
+        unsigned long currentMillis = millis();
+
+        // Проверяем, пора ли синхронизировать
+        if (currentMillis - lastTimeSync >= syncInterval) {
+            Serial.println("commonLoop: Attempting to sync time");
+            bool success = S_Common::S_Common::checkTime(
+                S_Settings().getSetting("remote", ""),
+                true
+            ); // Проверяем успех синхронизации
+            if (success) {
+                lastTimeSync = currentMillis;
+                Serial.println("commonLoop: Time synced successfully");
+            } else {
+                Serial.println("commonLoop: Time sync failed, will retry later");
+                // Если синхронизация не удалась, пробуем снова через retryInterval
+                if (currentMillis - lastAttempt >= retryInterval) {
+                    lastAttempt = currentMillis;
+                    S_Common::S_Common::setUTime(); // Повторная попытка
+                }
+            }
+        }
+    }
 }

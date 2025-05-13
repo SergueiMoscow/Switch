@@ -39,6 +39,7 @@ namespace S_Common
         static String extractHost(const String& url);
         static long utcOffset;
     };
+    void commonLoop();
     int getPin(const String& pinStr);
     static long parseUtcOffset(const String& offsetStr);
 
